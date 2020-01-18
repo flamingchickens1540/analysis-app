@@ -1,0 +1,29 @@
+{
+  "info": {
+    "team": "0000"
+  },
+  "Login": {
+    "Scout": "undefined"
+  },
+  "General Info": {
+    "Weight": "125",
+    "Cameras": "",
+    "Language": "labview"
+  },
+  "Sandstorm": {
+    "Technique": ["none"],
+    "Cross Line": "none"
+  },
+  "Capabilities": {
+    "Load Hatches": [],
+    "Load Cargo": [],
+    "Climb": ["level 1"],
+    "Buddy Climb": "none",
+    "Cargo": [],
+    "Hatch": []
+  },
+  "Summation": {
+    "Primary Strategy": [],
+    "Notes": ""
+  }
+}

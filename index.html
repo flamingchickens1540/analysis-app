@@ -1,0 +1,317 @@
+<html lang="en">
+  <head>
+    <title>Analysis App</title>
+    <script type='text/javascript' src='./years/2020/game-script.js'></script>
+    <script type='text/javascript' src='script.js'></script>
+    <script src="node_modules/popper.js/dist/umd/popper.js" type="text/javascript"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.js"></script>
+    <link href="node_modules/bootstrap/dist/css/bootstrap.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css"></link>
+  </head>
+  <body>
+    <script>
+      window.jQuery = window.$ = require('jquery');
+    </script>
+    <!-- home page -->
+    <div id = "home" class = "page component">
+      <div class="top-div">
+        <b style="color:darkorange">Team:</b>
+        <b id="team-text">????</b>
+        <b style="color:purple">Event:</b>
+        <b id="event-text">????</b>
+      </div>
+      <h1 id="analysis-app-title" class="margin-above">Analysis App</h1>
+      <h5>Written by FRC Team 1540</h5>
+      <br />
+      <br />
+      <br />
+      <br />
+      <div class = "row">
+        <div class = "col-sm-3">
+          <button name="teams" class="btn btn-lg btn-primary home-btn">Teams</button>
+        </div>
+        <div class = "col-sm-3">
+          <button name="match-selection" class="btn btn-lg btn-warning home-btn">Matches</button>
+        </div>
+        <div class = "col-sm-3">
+          <button name="statistics" class="btn btn-lg btn-success home-btn">Statistics</button>
+        </div>
+        <div class = "col-sm-3">
+          <button name="rankings" class="btn btn-lg btn-purple home-btn">Rankings</button>
+        </div>
+      </div>
+      <br />
+      <br />
+      <br />
+      <br />
+      <br />
+      <br />
+      <div class = "row">
+        <div class = "col-sm-3">
+          <button name="picklist" class="btn btn-lg btn-moss home-btn">Picklist</button>
+        </div>
+        <div class = "col-sm-3">
+          <button name="drawing" class="btn btn-lg btn-info home-btn">Drawing</button>
+        </div>
+        <div class = "col-sm-3">
+          <button name="pit-layout" class="btn btn-lg btn-secondary home-btn">Pit Layout</button>
+        </div>
+        <div class = "col-sm-3">
+          <button name="scouts" class="btn btn-lg btn-danger home-btn">Scouts</button>
+        </div>
+      </div>
+    </div>
+    <!-- teams page -->
+    <div style = "display:none" id = "teams" class = "page component">
+      <h3 class="margin-above">Teams</h3>
+      <br />
+      <input style="width: 50%; position:absolute; left: 25%;" type="text" placeholder="Enter team number or name" class="form-control team-search">
+      <br>
+      <br />
+      <table id="teams-table" style="margin-left:20%;width:60%" class="table table-hover">
+        <thead class="thead-dark">
+          <tr>
+            <th style="width:20%">#</th>
+            <th>Team</th>
+            <th style="width:20%">Select</th>
+          </tr>
+        </thead>
+        <tbody class="teams-body">
+        </tbody>
+      </table>
+    </div>
+    <!-- scouts page -->
+    <div style = "display:none" id = "scouts" class = "page component">
+      <h3 class="margin-above">Scouts</h3>
+      <br />
+      <table style="text-align:center;width:80%;position:relative;left:10%;" class="table scout-list-table">
+        <tr>
+          <th>Scout</th>
+          <th>Matches Scouted</th>
+        </tr>
+      </table>
+    </div>
+    <!-- rankings page -->
+    <div style = "display:none" id = "rankings" class = "page component">
+      <h3 class="margin-above">Rankings</h3>
+      <br />
+      <table style="text-align:center;width:80%;position:relative;left:10%;" class="table table-striped">
+        <thead class="rankings-table-head thead-dark">
+          <tr class="rankings-table-headrow">
+            <th>Rank</th>
+          </tr>
+        </thead>
+        <tbody class="rankings-table-body">
+        </tbody>
+      </table>
+    </div>
+    <!-- team page -->
+    <div style = "display:none" id = "team" class = "page component">
+      <h3 class="team-title margin-above">Team</h3>
+      <!-- image carousel -->
+      <div style="background:black" id="myCarousel" width="400px" class="carousel slide" data-ride="carousel">
+        <!-- Indicators -->
+        <ol class="carousel-indicators">
+        </ol>
+        <!-- Wrapper for slides -->
+        <div class="carousel-inner">
+        </div>
+        <!-- Left and right controls -->
+        <a class="left carousel-control" href="#myCarousel" data-slide="prev">
+          <span class="glyphicon glyphicon-chevron-left"></span>
+          <span class="sr-only">Previous</span>
+        </a>
+        <a class="right carousel-control" href="#myCarousel" data-slide="next">
+          <span class="glyphicon glyphicon-chevron-right"></span>
+          <span class="sr-only">Next</span>
+        </a>
+      </div>
+      <br />
+      <div id="team-button-div">
+        <!-- Carousel toggle button -->
+        <button class="btn btn-lg btn-warning toggle-photos">Toggle Photos</button>
+      </div>
+      <!-- Stats div -->
+      <div hidden class="team-stats-div">
+      </div>
+      <br />
+      <table style="margin-left:5%;width:90%" id="team-table" class="table table-striped">
+        <thead class="thead-dark">
+          <tr id="indv-team-tr">
+            <th>Match</th>
+            <th class="scout-td">Scout</th>
+          </tr>
+        </thead>
+        <tbody id="indv-team-body">
+        </tbody>
+      </table>
+      <br />
+      <div class="team-simple-stats">
+      </div>
+    </div>
+    <!-- match-selection page -->
+    <div style = "display:none" id = "match-selection" class = "page component">
+      <h3 class="margin-above">Matches</h3>
+      <br />
+      <br />
+      <br />
+      <br />
+      <div class = "row">
+        <div class = "col-sm-6">
+          <button name="matches" class="btn btn-lg btn-primary our-matches-btn">Our Matches</button>
+        </div>
+        <div class = "col-sm-6">
+          <button name="matches" class="btn btn-lg btn-danger all-matches-btn">All Matches</button>
+        </div>
+      </div>
+    </div>
+    <!-- matches page -->
+    <div style = "display:none" id = "matches" class = "page component">
+      <h3 class="matches-title margin-above">Matches</h3>
+      <h5 class="matches-team-display">Team 1540</h5>
+      <div class="row">
+        <div class="col-4 match-col match-col-0">
+        </div>
+        <div class="col-4 match-col match-col-1">
+        </div>
+        <div class="col-4 match-col match-col-2">
+        </div>
+      </div>
+    </div>
+    <!-- match summary page -->
+    <div style = "display:none" id = "match-summary" class = "page component">
+      <h3 class="match-number margin-above">Match 0</h3>
+      <h4>Information Reported w/ Medians</h4>
+      <h4 class="expected-score">0 - 0</h4>
+      <button class="btn btn-primary view-on-tba">View on TBA</button>
+      <div class="row">
+        <div class="col-1"></div>
+        <div class="col-5 match-summary-red match-summary-col match-summary-col-r1">
+          <h3 class="match-summary-team match-summary-team-r1">1540</h3>
+          <div class="match-summary-team-info match-summary-team-info-r1"></div>
+        </div>
+        <div class="col-5 match-summary-blue match-summary-col match-summary-col-b1">
+          <h3 class="match-summary-team match-summary-team-b1">4488</h3>
+          <div class="match-summary-team-info match-summary-team-info-b1"></div>
+        </div>
+        <div class="col-1"></div>
+      </div>
+      <div class="row">
+        <div class="col-1"></div>
+        <div class="col-5 match-summary-red match-summary-col match-summary-col-r2">
+          <h3 class="match-summary-team match-summary-team-r2">Avi and His FLL Robot</h3>
+          <div class="match-summary-team-info match-summary-team-info-r2"></div>
+        </div>
+        <div class="col-5 match-summary-blue match-summary-col match-summary-col-b2">
+          <h3 class="match-summary-team match-summary-team-b2">Chonk</h3>
+          <div class="match-summary-team-info match-summary-team-info-b2"></div>
+        </div>
+        <div class="col-1"></div>
+      </div>
+      <div class="row">
+        <div class="col-1"></div>
+        <div class="col-5 match-summary-red match-summary-col match-summary-col-r3">
+          <h3 class="match-summary-team match-summary-team-r3">254</h3>
+          <div class="match-summary-team-info match-summary-team-info-r3"></div>
+        </div>
+        <div class="col-5 match-summary-blue match-summary-col match-summary-col-b3">
+          <h3 class="match-summary-team match-summary-team-b3">Dean Kamen</h3>
+          <div class="match-summary-team-info match-summary-team-info-b3"></div>
+        </div>
+        <div class="col-1"></div>
+      </div>
+    </div>
+    <!-- statistics page -->
+    <div style = "display:none" id = "statistics" class = "page component">
+      <h3 class="margin-above">Statistics</h3>
+      <br />
+      <table class="table table-borderless stats-table">
+        <tbody class="stats-table-body">
+          <tr>
+            <th></th>
+            <th>
+              <input team="1" class="stats-input stats-input-1" type="text" />
+            </th>
+            <th>
+              <input team="2" class="stats-input stats-input-2" type="text" />
+            </th>
+            <th></th>
+          </tr>
+          <tr>
+            <td></td>
+            <td class="stats-name-1"></td>
+            <td class="stats-name-2"></td>
+            <td>Significance</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- picklist page -->
+    <div style = "display:none" id = "picklist" class = "page component">
+      <h3 class="margin-above">Picklists</h3>
+      <div class="picklist-container"></div>
+      <br />
+      <button class="btn btn-success add-picklist">+ Add New Picklist</button>
+    </div>
+    <!-- drawing page -->
+    <div style = "display:none" id = "drawing" class = "page component">
+      <h3 class="margin-above">Drawing</h3>
+      <i class="canvas-match-display">Match: 1</i>
+      <br />
+      <input placeholder="#" class="canvas-match-input" type="text" />
+      <button class="btn btn-success submit-match-to-canvas">Submit</button>
+      <br />
+      <canvas width="815" height="451" style="background:lightgray" id="canvas" src="field.png"></canvas>
+      <br />
+      <span>Color:</span>
+      <input type="color" class="canvas-color" value="#ff0000">
+      <button class="btn btn-primary undo-canvas">Undo</button>
+      <button class="btn btn-dark erase-canvas">Reset</button>
+    </div>
+    <!-- pit layout -->
+    <div style = "display:none" id = "pit-layout" class = "page component">
+      <h3 class="margin-above">Pit Layout</h3>
+      <br />
+      <img class="pit-layout-png" src="./resources/pit-layout.png" />
+    </div>
+    <!-- home & back buttons -->
+    <div class="top-left-settings">
+      <button class="btn btn-lg btn-top btn-outline-info go-to-home" type="button">
+        <i class="fa fa-home"> Home</i>
+      </button>
+      <button class="btn btn-lg btn-top btn-outline-secondary back" type="button">
+        <p style="position:relative;top:3px;">&#8592; Back</p>
+      </button>
+    </div>
+    <!-- settings button -->
+    <div class="dropdown settings">
+      <button data-toggle="dropdown" role="button" aria-expanded="false" class="btn btn-lg btn-outline-dark dropdown-toggle" type="button" style="height:50px;">
+        <i class="fa fa-gear"> Settings</i>
+      </button>
+      <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+        <h6 style="color:red" class="dropdown-header">Flashdrive</h6>
+        <a class="load-flash-data dropdown-item" href="#">Load Data</a>
+        <a class="load-flash-sched dropdown-item" href="#">Load Schedule</a>
+        <a class="load-flash-scouts dropdown-item" href="#">Load Scouts</a>
+        <a class="bluetooth-server dropdown-item" href="#">Start Bluetooth Server</a>
+        <div class="dropdown-divider"></div>
+        <h6 style="color:red" class="dropdown-header">Sharing Data</h6>
+        <a class="toggle-sensitive-info dropdown-item" href="#">Hide Sensitive Info</a>
+        <a class="export-data dropdown-item" href="#">Export Data as CSV</a>
+        <a class="export-as-folder dropdown-item" href="#">Export Data to a Folder</a>
+        <div class="dropdown-divider"></div>
+        <h6 style="color:red" class="dropdown-header">Miscellaneous</h6>
+        <a class="set-event dropdown-item" href="#">Change Event</a>
+        <a class="clear-data dropdown-item" href="#">Clear Data</a>
+        <a class="download-external-photos dropdown-item" href="#">Download External Photos</a>
+        <a class="disabled cluck-scouts dropdown-item" href="#">Load Scouts From Cluck</a>
+      </div>
+    </div>
+    <input id="dir-loader" hidden type="file" webkitdirectory />
+    <input id="dir-finder" hidden type="file" webkitdirectory />
+    <input id="file-loader" hidden type="file" />
+    <br />
+  </body>
+</html>

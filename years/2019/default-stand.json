@@ -1,0 +1,36 @@
+{
+  "info": {
+    "role": "r1",
+    "match": "1",
+    "team": "0000"
+  },
+  "Stand": {
+    "Login": "undefined"
+  },
+  "Start": {
+    "Preload": "none",
+    "Cross Line": "none"
+  },
+  "Teleop": {
+    "Hatch Low": 0,
+    "Hatch Mid": 0,
+    "Hatch High": 0,
+    "Cargo Low": 0,
+    "Cargo Mid": 0,
+    "Cargo High": 0,
+    "Hatch Ship": 0,
+    "Cargo Ship": 0,
+    "Dropped Hatch": 0,
+    "Dropped Cargo": 0,
+    "Played Defense": ["no"],
+    "Faced Defense": "no"
+  },
+  "Endgame": {
+    "Platform": "none",
+    "Assistance": "none"
+  },
+  "Notes": {
+    "Notes": "",
+    "Stopped": "none"
+  }
+}

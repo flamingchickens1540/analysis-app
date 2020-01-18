@@ -1,0 +1,213 @@
+body {
+  font-family: Lato, Raleway, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+.top-div {
+  position: absolute;
+  top: 15px;
+  text-align: center;
+  width: 100%;
+  font-size:20px;
+}
+
+.page {
+  text-align: center;
+}
+.margin-above {
+  margin-top: 100px;
+}
+.top-left-settings {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+.settings {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.btn-top {
+  height: 50px;
+  display: none;
+  margin-right: 5px;
+}
+table {
+  text-align: center;
+}
+.modal-table {
+  table-layout: fixed;
+}
+th {
+  text-align: center;
+}
+
+#myCarousel {
+  height:240px;
+}
+.carousel-inner > .item > img {
+  /* width:424px; */
+  height:240px;
+  margin: 0 auto;
+}
+
+/* The Modal (background) */
+.modal {
+  position: fixed; /* Stay in place */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content/Box */
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto; /* 15% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%; /* Could be more or less, depending on screen size */
+}
+.close {
+  color: red;
+}
+.enter {
+  color: green;
+}
+.close-delete {
+  color: black;
+}
+
+.match-team-btn {
+  width: 60px;
+  margin: 2px;
+}
+
+/* Matches page */
+.our-team-btn {
+  background: rgb(95, 49, 125);
+  border: 1px solid black;
+}
+.display-team-btn {
+  border: 1px solid black;
+}
+
+/* Picklist page */
+.picklist {
+  text-align: left;
+  border-radius: 25px;
+  margin-left: 5%;
+  border: 1px solid black;
+  width: 90%;
+}
+
+.picklist-content {
+  margin-left: 30px;
+}
+
+.wide-btn{
+  position: relative;
+  width: 100%;
+  top: 15px;
+  right: 40px;
+}
+
+.picklist-input {
+  font-family:Lato, Raleway, Helvetica, sans-serif;
+  width:30px;
+  position:relative;
+  left:15px;
+}
+
+.picklist-table {
+  text-align: left;
+}
+
+.stats-table {
+  table-layout: fixed;
+  border: none;
+}
+
+.picklist-del-team {
+  position: relative;
+  left: 25px;
+}
+
+.match-summary-col {
+  border: 1px solid black;
+  border-radius: 10px;
+  background-color: rgb(240, 240, 240);
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.match-summary-red {
+  text-align: left;
+  color:red;
+  right:10px;
+  ;
+}
+
+.match-summary-blue {
+  text-align: right;
+  color:blue;
+  left: 10px;
+}
+
+.match-summary-team-info {
+  color:black;
+}
+
+.tbody-btn-div {
+  width: 76.5vw;
+}
+
+.modal-btn {
+  border: 1px solid black;
+  background: #70ff8a;
+}
+
+#canvas {
+  max-height:100%;
+  height: auto;
+  width: 90%;
+  cursor: pointer;
+}
+
+.canvas-color {
+  border: none;
+  background: none;
+}
+
+.pit-layout-png {
+  max-width: 80%;
+  height: auto;
+  width: auto\9; /* ie8 */
+}
+
+.btn-secondary:hover, .btn-secondary:focus {
+  color: white;
+}
+
+.btn-purple {
+  background-color: #aa66cc;
+  color:white;
+}
+.btn-purple:hover,
+.btn-purple:focus {
+  color: white;
+  background-color: #9933CC;
+}
+
+.btn-moss {
+  background-color: #a1887f;
+  color: white;
+}
+.btn-moss:hover,
+.btn-moss:focus {
+  color: white;
+  background-color: #795548;
+}
