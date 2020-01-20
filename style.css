@@ -27,6 +27,12 @@ body {
   top: 10px;
   right: 10px;
 }
+.bluetooth_display {
+  position: absolute;
+  top: 40px;
+  right: 10px;
+  width: 130px;
+}
 .btn-top {
   height: 50px;
   display: none;

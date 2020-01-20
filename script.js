@@ -155,7 +155,6 @@ function loadStandData() {
       setDefaultsForStand(data_point, file_name);
       // if the file was not created recently enough to actually be for this event, it gets ignored
       if (!isFileForEvent(data_point)) {
-		  console.log("NOT FOR EVENT")
         continue;
       }
       let team_name = gameScript.standJSON.getTeamNumber(data_point);
@@ -281,8 +280,6 @@ function isFileForEvent(json) {
   if (json_time === undefined) { return false; }
   json_time = new Date(parseInt(json_time));
   let event_start_time = new Date(comp["start_date"]);
-  console.log(event_start_time)
-  console.log(json_time)
   return event_start_time <= json_time;
 }
 
@@ -507,14 +504,26 @@ let bluetooth_child = null;
 function bluetoothScript() {
   if (bluetooth_running) {
     // stops the code
-    bluetooth_child.kill();
+    try {
+      bluetooth_child.kill();
+    } catch(err) {
+      console.log(err);
+    }
     bluetooth_running = false;
     $(".bluetooth-server").text("Start Bluetooth Server");
+    $(".bluetooth_display").hide();
   } else {
-    // exec.exec returns a child_process
-    let bluetooth_child = exec.exec("python './python/bluetooth-server.py'");
-    bluetooth_running = true;
-    $(".bluetooth-server").text("Stop Bluetooth Server");
+    // checks to see if MAC is in the platform you are using, as bluetooth doesn't work on MacOS
+    // should be fairly futureproof --> https://stackoverflow.com/questions/10527983/best-way-to-detect-mac-os-x-or-windows-computers-with-javascript-or-jquery
+    if (navigator.platform.toUpperCase().indexOf('MAC') < 0) {
+      // exec.exec returns a child_process
+      let bluetooth_child = exec.exec("python './python/bluetooth-server.py'");
+      bluetooth_running = true;
+      $(".bluetooth-server").text("Stop Bluetooth Server");
+      $(".bluetooth_display").show();
+    } else {
+      alert("Bluetooth does not work on non-Windows devices.");
+    }
   }
 }
 
@@ -560,22 +569,18 @@ function loadDeviceData() {
   }
 }
 
-// function new_data_files() {
-//   if (fs.existsSync("./data/stand/manifest.json")) {
-//     temp_stand_manifest = JSON.parse(fs.readFileSync("./data/stand/manifest.json"));
-//   };
-//   if (fs.existsSync("./data/pit/manifest.json")) {
-//     temp_pit_manifest = JSON.parse(fs.readFileSync("./data/pit/manifest.json"));
-//   };
-//   if (fs.existsSync("./data/notes/manifest.json")) {
-//     temp_notes_manifest = JSON.parse(fs.readFileSync("./data/notes/manifest.json"));
-//   };
-//   // checks to see if new manifest lengths are the same
-//   if len(temp_stand_manifest)
-// }
-
-// starts a thread that checks for new files in the folder
-
+// starts a thread that checks for new files in the data folder
+// creates a "New Data" button in top-left when it notices new valid files
+fs.watch("./data", { encoding: 'buffer', recursive: true }, (eventType, filename) => {
+  // this catches all files that don't have a time logged, which includes all non-JSON files and manifest.json
+  try {
+    sleep(10000);
+    let file = JSON.parse(fs.readFileSync("./data/" + filename));
+    if ("time" in file["info"]) {
+      $(".new-bluetooth-files").show();
+    }
+  } catch(err) { }
+});
 
 /********************************************/
 /*          GETTING DATA FROM TBA           */
@@ -998,6 +1003,18 @@ function addPrescoutDataToPage() {
   }
 }
 
+// calculates all of one type of score for one team and returns an array, where each match is a different value in the array
+// len(array) == num matches played by team
+function allScoresForTeam(team, scoreMethod) {
+  let team_matches = stand_data[team];
+  let scores = [];
+  for (let match_index in team_matches) {
+    let match = team_matches[match_index];
+    scores.push(scoreMethod(match));
+  }
+  return scores;
+}
+
 // adds overall statistics to buttons
 function addOverallStatsToPage() {
   // all categories for stats (e.g. ["hatch", "cargo"])
@@ -1403,7 +1420,6 @@ function createMatch(loc, match_number, team) {
   $(loc).append(append_html);
   // go to match summaries
   $(".summary-" + match_number).click(function() {
-    console.log(match_number);
     switchPages("match-summary", undefined, match_number, 1);
   });
   // makes the btn switch pages
@@ -1513,6 +1529,8 @@ function displayMatchSummary(match_number) {
 
 // statistic library for doing t-tests
 const simpleStats = require("simple-statistics");
+// general statistics library
+const jStat = require("jStat").jStat;
 
 // the data present on the "Statistics" page
 let stats_data = {
@@ -1548,6 +1566,11 @@ function setupStatsTable() {
 
 // updates the stats table once a new team is inputted
 function updateStatsTable(team_number, alignment) {
+  // makes sure there is enough data to run a t-test
+  if (!(team_number in stand_data) || stand_data[team_number].length <= 1) {
+    alert("Not enough data on this team!");
+    return false;
+  }
   // team previously inputted
   let prev_team = $(".stats-name-" + alignment).text();
   // the name of team_number
@@ -2175,8 +2198,10 @@ function onStart() {
   createPicklist();
   // decides whether or not to display sensitive info
   displaySensitiveInfo();
-  // hides the "Team" page carousel
+  // hides several things
   $("#myCarousel").hide();
+  $(".bluetooth_display").hide();
+  $(".new-bluetooth-files").hide();
   // puts scouts on Scouts page
   populateScouts();
   // sets up the rankings table
@@ -2303,6 +2328,9 @@ $(document).ready(function() {
     if (comp["key"] != "test") {
       shell.openExternal(tbaMatchLink);
     }
+  });
+  $(".new-bluetooth-files").click(function() {
+    window.location.reload();
   });
   // add a picklist
   $(".add-picklist").click(createPicklist);

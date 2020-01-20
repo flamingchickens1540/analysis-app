@@ -1,7 +1,6 @@
 <html lang="en">
   <head>
     <title>Analysis App</title>
-    <script type='text/javascript' src='./years/2020/game-script.js'></script>
     <script type='text/javascript' src='script.js'></script>
     <script src="node_modules/popper.js/dist/umd/popper.js" type="text/javascript"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.js"></script>
@@ -276,7 +275,7 @@
       <br />
       <img class="pit-layout-png" src="./resources/pit-layout.png" />
     </div>
-    <!-- home & back buttons -->
+    <!-- home & back & newData buttons -->
     <div class="top-left-settings">
       <button class="btn btn-lg btn-top btn-outline-info go-to-home" type="button">
         <i class="fa fa-home"> Home</i>
@@ -284,8 +283,10 @@
       <button class="btn btn-lg btn-top btn-outline-secondary back" type="button">
         <p style="position:relative;top:3px;">&#8592; Back</p>
       </button>
+      <button class="btn btn-lg btn-outline-success new-bluetooth-files">New Data</button>
     </div>
-    <!-- settings button -->
+    <!-- settings button, bluetooth display -->
+    <img class="bluetooth_display" src = "./resources/bluetoothDisplay.png" />
     <div class="dropdown settings">
       <button data-toggle="dropdown" role="button" aria-expanded="false" class="btn btn-lg btn-outline-dark dropdown-toggle" type="button" style="height:50px;">
         <i class="fa fa-gear"> Settings</i>
