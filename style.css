@@ -11,6 +11,23 @@ body {
   font-size:20px;
 }
 
+.match-dot {
+  position: absolute;
+  height: 4px;
+  width: 4px;
+  background-color: black;
+  border-radius: 50%;
+  right:-9px;
+  bottom:19px;
+  display: inline-block;
+}
+
+.summary-check {
+  position:absolute;
+  top:5px;
+  left:5px;
+}
+
 .page {
   text-align: center;
 }
@@ -150,15 +167,21 @@ th {
   margin-bottom: 10px;
 }
 
-.match-summary-red {
+.summary-image {
+  height: 80%;
+  position: absolute;
+  bottom: 10%;
+  right: 10px;
+}
+
+.match-summary-red, .match-summary-blue {
   text-align: left;
   color:red;
   right:10px;
-  ;
 }
 
 .match-summary-blue {
-  text-align: right;
+  text-align: left;
   color:blue;
   left: 10px;
 }

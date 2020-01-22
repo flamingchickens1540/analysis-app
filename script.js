@@ -1386,6 +1386,8 @@ function sortTeamsByCategory(categoryTest) {
 // link to thebluealliance page for match
 let tbaMatchLink = "https://www.thebluealliance.com";
 
+const roles = ["r1", "r2", "r3", "b1", "b2", "b3"];
+
 // loc is the location to add the match to
 // team is the selected_team
 function createMatch(loc, match_number, team) {
@@ -1407,7 +1409,7 @@ function createMatch(loc, match_number, team) {
     // if team is selected_team, make it green but also display-team-btn
     else if (displayed_team == team) { btn_type = "btn-success display-team-btn"; }
     // that btn is about to be appended!
-    append_html += `<button class="btn ` + btn_type + ` match-team-btn match-team-btn-` + match_number + `">` + displayed_team + `</button>`;
+    append_html += `<button class="btn ` + btn_type + ` match-team-btn match-team-btn-` + match_number + `"><div style="position:relative" class="m` + match_number + `-` + displayed_team + `">` + displayed_team + `</div></button>`;
     // create a new row for the btns for the blue alliance
     if (team_index == 2) { append_html += `</div><div>`; }
   }
@@ -1439,6 +1441,19 @@ function createMatch(loc, match_number, team) {
   $(".draw-" + match_number).click(function() {
     switchPages("drawing", undefined, match_number, 1);
   });
+}
+
+// show collected data on buttons
+function showCollectedMatches() {
+  // loop through teams
+  for (let team_index in teams) {
+    let team = teams[team_index];
+    // loop through stand data
+    for (let stand_index in stand_data[team]) {
+      let data = stand_data[team][stand_index];
+      $(".m" + data["info"]["match"] + "-" + team).append("<span class='match-dot'></span>");
+    }
+  }
 }
 
 // predicts the score of a match
@@ -1487,6 +1502,30 @@ function displayMatchesForTeam(team) {
     // ".match-col-"+match_index%3 is where the match will be appended, in one of three columns
     createMatch(".match-col-" + match_index % 3, matches_to_display[match_index], team);
   }
+  showCollectedMatches();
+}
+
+//sets up all the match summary HTML
+function setupMatchSummaryPage() {
+  for (let x = 1; x < 4; x += 1) {
+    $("#match-summary").append(`<div class="row summary-row summary-row-` + x + `"></div>`);
+    $(".summary-row-" + x).html(`
+      <div class="col-1"></div>
+      <div class="col-5 match-summary-red match-summary-col match-summary-col-r` + x + `"></div>
+      <div class="col-5 match-summary-blue match-summary-col match-summary-col-b` + x + `"></div>
+      <div class="col-1"></div>
+    `);
+  }
+  for (let role_index in roles) {
+    let role = roles[role_index];
+    let alliance = role[0] == "r" ? "red":"blue";
+    $(".match-summary-col-" + role).append(`
+      <h3 class="match-summary-team match-summary-team-` + role + `">Regular Team</h3>
+      <div class="match-summary-team-info match-summary-team-info-` + role + `"></div>
+      <p class="summary-check match-summary-` + role + `-check">&#10003;</p>
+      <img class="summary-image summary-image-` + alliance + ` summary-image-` + role + `" />
+    `);
+  }
 }
 
 // displays the summary for a match
@@ -1501,7 +1540,6 @@ function displayMatchSummary(match_number) {
   let match = schedule[match_number];
   let predicted_scores = predictMatch(match_number);
   $(".expected-score").html(`Predicted: <span style="color:red">` + predicted_scores[0] + `</span> - <span style="color:blue">` + predicted_scores[1] + `</span>`);
-  const roles = ["r1", "r2", "r3", "b1", "b2", "b3"];
   // sets team info for each team
   for (let team_index in roles) {
     let role = roles[team_index];
@@ -1516,10 +1554,18 @@ function displayMatchSummary(match_number) {
       let category = categories[category_id];
       let calculateScore = gameScript.summary_values[category];
       $(".match-summary-team-info-" + role).append(`
-        <h4>` + category + ` - ` + roundto100th(calculateScore(team_id)) + `</h4>
+        <h5>` + category + ` - ` + roundto100th(calculateScore(team_id)) + `</h4>
       `);
     }
-
+    // adds a checkmark if this match data has been collected
+    if (team_id in stand_data && stand_data[team_id].find(o => o["info"]["match"] == match_number) !== undefined) {
+      $(".match-summary-" + role + "-check").show();
+    } else {
+      $(".match-summary-" + role + "-check").hide();
+    }
+    if (image_data[team_id].length >= 0) {
+      $(".summary-image-" + role).attr("src", image_data[team_id][0]);
+    }
   }
 }
 
@@ -2202,10 +2248,13 @@ function onStart() {
   $("#myCarousel").hide();
   $(".bluetooth_display").hide();
   $(".new-bluetooth-files").hide();
+  $(".summary-check").hide();
   // puts scouts on Scouts page
   populateScouts();
   // sets up the rankings table
   addRankingsToPage();
+  // sets up the summary page
+  setupMatchSummaryPage();
   // sets up the stats table for the statistics page
   setupStatsTable();
 }
