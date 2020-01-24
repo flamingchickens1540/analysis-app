@@ -182,7 +182,7 @@ function loadPitData() {
       let data_point = JSON.parse(fs.readFileSync("./data/pit/" + file_name));
       let team_name = gameScript.standJSON.getTeamNumber(data_point);
       // sets defaults if values are non-existent
-      // setDefaultsForPit(data_point);
+      setDefaultsForPit(data_point);
       // adds data point to pit_data
       pit_data[team_name] = data_point;
     }
@@ -800,6 +800,7 @@ function switchPages(new_page, team, match, direction) {
   if (current_page == "team") {
     $(".team-title").text(team + " - " + team_id_to_name[team]);
     addData();
+    addSummaryRankingsToTeamPage(team);
   }
   if (current_page == "drawing") {
     if (match === undefined) { changeCanvasMatch("1"); }
@@ -1032,6 +1033,18 @@ function addOverallStatsToPage() {
     addButtonOverallStat(category_name, "Maximum", jStat.max(scores));
     addButtonOverallStat(category_name, "StDev", jStat.stdev(scores));
   }
+}
+
+// adds summary rankings to the team page
+function addSummaryRankingsToTeamPage(team) {
+  let summaryText = "";
+  let categories = Object.keys(gameScript.summary_values);
+  for (let category_id in categories) {
+    let category = categories[category_id];
+    let calculateScore = gameScript.summary_values[category];
+    summaryText += (category + ": <b>" + roundto100th(calculateScore(team)) + "</b> | ");
+  }
+  $("#team-summary-stats").html(summaryText.slice(0, -3));
 }
 
 // adds notes to team page
@@ -1415,8 +1428,6 @@ function createMatch(loc, match_number, team) {
   }
   append_html += `</div>
     <button style="margin-top:2px" class="btn btn-light summary-` + match_number + `">Summary</button>
-    <button style="margin-top:2px" class="btn btn-light predict-` + match_number + `">Predict</button>
-    <button style="margin-top:2px" class="btn btn-light draw-` + match_number + `">Draw &#8594</button>
   </div>`;
   // actually adds the html
   $(loc).append(append_html);
@@ -1427,19 +1438,6 @@ function createMatch(loc, match_number, team) {
   // makes the btn switch pages
   $(".match-team-btn-" + match_number).click(function() {
     switchPages("team", $(this).text(), undefined, 1);
-  });
-  // look at the expected scores
-  $(".predict-" + match_number).click(function() {
-    let predicted_scores = predictMatch(match_number);
-    let red = predicted_scores[0];
-    let blue = predicted_scores[1];
-    // alerts expected scores
-    alert("Red: " + red + "\nBlue: " + blue);
-
-  });
-  // go draw for the match
-  $(".draw-" + match_number).click(function() {
-    switchPages("drawing", undefined, match_number, 1);
   });
 }
 
@@ -1523,7 +1521,7 @@ function setupMatchSummaryPage() {
       <h3 class="match-summary-team match-summary-team-` + role + `">Regular Team</h3>
       <div class="match-summary-team-info match-summary-team-info-` + role + `"></div>
       <p class="summary-check match-summary-` + role + `-check">&#10003;</p>
-      <img class="summary-image summary-image-` + alliance + ` summary-image-` + role + `" />
+      <div class="summary-image-div"><img class="summary-image summary-image-` + alliance + ` summary-image-` + role + `" /></div>
     `);
   }
 }
@@ -2251,12 +2249,12 @@ function onStart() {
   $(".summary-check").hide();
   // puts scouts on Scouts page
   populateScouts();
-  // sets up the rankings table
-  addRankingsToPage();
   // sets up the summary page
   setupMatchSummaryPage();
   // sets up the stats table for the statistics page
   setupStatsTable();
+  // sets up the rankings table
+  addRankingsToPage();
 }
 
 // shows/hides sensitive info
@@ -2380,6 +2378,10 @@ $(document).ready(function() {
   });
   $(".new-bluetooth-files").click(function() {
     window.location.reload();
+  });
+  // go draw for the match
+  $(".draw-btn").click(function() {
+    switchPages("drawing", undefined, selected_match, 1);
   });
   // add a picklist
   $(".add-picklist").click(createPicklist);

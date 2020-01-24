@@ -4,6 +4,19 @@
 
 // general statistics library
 const jStat = require("jStat").jStat;
+const fs = require("fs");
+
+// TBA setup
+const TbaApiV3client = require('tba-api-v3client');
+const defaultClient = TbaApiV3client.ApiClient.instance;
+const apiKey = defaultClient.authentications['apiKey'];
+apiKey.apiKey = JSON.parse(fs.readFileSync("./resources/keys.json"))["tba-api-key"];
+const team_api = new TbaApiV3client.TeamApi();
+const event_api = new TbaApiV3client.EventApi();
+const match_api = new TbaApiV3client.MatchApi();
+
+let comp = JSON.parse(fs.readFileSync("./resources/event.json"));
+let schedule = JSON.parse(fs.readFileSync("./resources/schedule.json"));
 
 // calculates all of one type of score for one team and returns an array, where each match is a different value in the array
 // len(array) == num matches played by team
@@ -137,6 +150,41 @@ module.exports = {
       let median = jStat.median(allScoresForTeam(team, module.exports.standJSON.values.getAllCells));
       return median;
     },
+    // // PCPR - Power Cell Power Ranking
+    // "PCPR": function(team) {
+    //   let team_matches = stand_data[team];
+    //   for (let match_index in team_matches) {
+    //     let match = team_matches[match_index];
+    //     let match_num = match["info"]["match"];
+    //     let role = match["info"]["role"][0];
+    //     let alliance = role == "r" ? "red":"blue";
+    //     match_api.getMatch(comp["key"] + "_qm" + match_num, {}, function(error, data, response) {
+    //       if (error) {
+    //         console.error(error);
+    //         return 0;
+    //       } else {
+    //         // until I receive a breakdown for the TBA API Score Breakdown 2020, I'm going to use random 2019 values
+    //         let num_alliance_inner_cells = data["score_breakdown"][alliance]["cargoPoints"];
+    //         let num_alliance_high_cells = data["score_breakdown"][alliance]["hatchPanelPoints"];
+    //         let num_alliance_total_high_cells = num_alliance_high_cells + num_alliance_inner_cells;
+    //         if (num_alliance_total_high_cells == 0) { return 0; }
+    //         let percentage_inner = 1.0 * num_alliance_inner_cells / num_alliance_total_high_cells;
+    //         let num_high_cells = module.exports.standJSON.values.getAllHighCells(match);
+    //         let num_inner_cells_prediction = percentage_inner * num_high_cells;
+    //         return num_inner_cells_prediction;
+    //         // for (let x = 0; x < 6; x += 1) {
+    //         //   // this checks to see if the robot is the same position as you but is on your alliance
+    //         //   if ((x % 3 + 1) != role[1] && ((alliance == "red" && x < 3) || (alliance == "blue" && x > 2))) {
+    //         //     if (fs.existsSync("./data/stand/m" + match_num + "-" + role + "-" schedule[x] + ".json")) {
+    //         //       let partner = JSON.parse(fs.readFileSync("./data/stand/m" + match_num + "-" + role + "-" schedule[x] + ".json"));
+    //         //       if (module.exports.standJSON.values.getAllHighCells(partner) >= 1) {}
+    //         //     }
+    //         //   }
+    //         // }
+    //       }
+    //     });
+    //   }
+    // },
     // calculates number of times the robot had a level climb
     "Level Climbs": function(team) {
       let level_total = 0;
@@ -163,7 +211,7 @@ module.exports = {
       return percentage;
     }
   },
-  // to be displayed on the match summary page
+  // to be displayed on the team page and match summary page
   summary_values: {
     // calculates median game piece count
     "Cells": function(team) {
@@ -213,7 +261,7 @@ module.exports = {
       let percentage = (defense_total * 100.0) / defense_scores.length;
       return percentage;
     },
-    "Scores": function(team) {
+    "Score": function(team) {
       let median = jStat.median(allScoresForTeam(team, module.exports.general.calculateScore));
       return median;
     },

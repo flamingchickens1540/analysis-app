@@ -172,6 +172,7 @@ th {
   position: absolute;
   bottom: 10%;
   right: 10px;
+  max-width: 15vw;
 }
 
 .match-summary-red, .match-summary-blue {

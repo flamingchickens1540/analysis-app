@@ -132,9 +132,6 @@
         <!-- Carousel toggle button -->
         <button class="btn btn-lg btn-warning toggle-photos">Toggle Photos</button>
       </div>
-      <!-- Stats div -->
-      <div hidden class="team-stats-div">
-      </div>
       <br />
       <table style="margin-left:5%;width:90%" id="team-table" class="table table-striped">
         <thead class="thead-dark">
@@ -146,9 +143,9 @@
         <tbody id="indv-team-body">
         </tbody>
       </table>
-      <br />
-      <div class="team-simple-stats">
-      </div>
+      <hr />
+      <!-- Team statistics -->
+      <h4 id="team-summary-stats"></h4>
     </div>
     <!-- match-selection page -->
     <div style = "display:none" id = "match-selection" class = "page component">
@@ -185,6 +182,7 @@
       <h4>Information Reported w/ Medians</h4>
       <h4 class="expected-score">0 - 0</h4>
       <button class="btn btn-primary view-on-tba">View on TBA</button>
+      <button class="btn btn-success draw-btn">Draw &#8594;</button>
     </div>
     <!-- statistics page -->
     <div style = "display:none" id = "statistics" class = "page component">
