@@ -1685,6 +1685,188 @@ function significanceColor(sig) {
 }
 
 /********************************************/
+/*       Zebra Motion Data Analysis         */
+/********************************************/
+
+//Loose and contact defense seem important
+//Not so much general and tight
+//Comparing loose and contact
+
+json = JSON.parse(json);
+const display = document.getElementById("display").getContext("2d");
+let heatmap = document.getElementById("heatmap");
+let heat = simpleheat(heatmap);
+
+const contactBoundary = 3.5;
+const tightBoundary = 6.5;
+const looseBoundary = 10;
+const generalBoundary = "generalBoundary";
+
+if (json["alliances"]["blue"]["0"]["xs"][0] > 25) {
+  document.getElementById("display").style.backgroundImage = "url('fieldFlip.png')";
+  document.getElementById("heatmap").style.backgroundImage = "url('fieldFlip.png')";
+}
+
+const constant = 10;
+
+class team {
+  constructor(object, color, isBlue) {
+    this.number = object["team_key"];
+    this.x = object["xs"];
+    this.y = object["ys"];
+    this.color = color;
+    this.heatMapData = [];
+    for (let i = 0; i < this.y.length; i++) {
+      this.heatMapData.push([this.x[i] * constant, this.y[i] * constant, 1])
+      // if (this.x[i]<25) {
+      //     console.log("Found Point!!!!")
+      //     console.log("x: " + this.x[i]);
+      //     console.log("y: " + this.y[i]);
+      //     console.log("time: " + json["times"][i]);
+      // }
+    }
+    this.isBlue = isBlue;
+    if (this.isBlue){
+      this.teamVal = 3;
+    } else {
+      this.teamVal = 0
+    }
+  }
+
+  drawBound() {
+    display.moveTo(this.x[0], this.y[0]);
+    display.beginPath();
+    for (let i = 1; i < this.y.length; i++) {
+      display.lineTo(this.x[i] * constant, this.y[i] * constant)
+    }
+    display.strokeStyle = this.color;
+    display.stroke()
+  }
+
+  drawHeat(max) {
+    heat.data(this.heatMapData);
+    heat.max(max);
+    heat.draw();
+  }
+
+  drawStart() {
+    display.beginPath();
+    display.arc(this.x[0] * constant, this.y[0] * constant, 3, 0, 2 * Math.PI, false);
+    display.lineWidth = 7;
+    display.strokeStyle = "black";
+    display.stroke();
+    display.beginPath();
+    display.arc(this.x[0] * constant, this.y[0] * constant, 5, 0, 2 * Math.PI, false);
+    display.lineWidth = 3;
+    display.strokeStyle = this.color;
+    display.stroke();
+  }
+
+  draw() {
+    this.drawBound();
+    this.drawHeat(18);
+    this.drawStart();
+  }
+
+  getTotal(boundary) {
+    this.contacts = 0;
+    if (boundary === generalBoundary) {
+      for (let team = this.teamVal; team < this.teamVal + 3; team++) {
+        for (let i = 0; i < this.x.length; i++) {
+          if (inGeneralBoundary(this, teams[team], i) && !(inGeneralBoundary(this, teams[team], i-1))){
+            this.contacts++;
+          }
+        }
+      }
+    } else {
+      for (let team = this.teamVal; team < this.teamVal + 3; team++) {
+        for (let i = 0; i < this.x.length; i++) {
+          if (inBoundary(this, teams[team], i, boundary)){
+            this.contacts++;
+          }
+        }
+      }
+    }
+    return this.contacts;
+  }
+
+  getPercentage(boundary) {
+    this.contacts = 0;
+    if (boundary === generalBoundary) {
+      for (let i = 0; i < this.x.length; i++) {
+        if (this.x[0] < 25){
+          if (this.x[i] > 25) {
+            this.contacts ++;
+            console.log(0);
+          }
+        }
+      }
+    } else {
+      for (let team = this.teamVal; team < this.teamVal + 3; team++) {
+        for (let i = 0; i < this.x.length; i++) {
+          if (inBoundary(this, teams[team], i, boundary)){
+            this.contacts++;
+          }
+        }
+      }
+    }
+    return Math.round(this.contacts/this.x.length * 100);
+  }
+
+
+}
+
+function inBoundary(team1, team2, time, distance) {
+  return (((team1.x[time] - team2.x[time]) ** 2 + (team1.y[time] - team2.y[time]) ** 2) < distance ** 2);
+}
+
+function inGeneralBoundary(team1, team2, time) {
+  if (team1.x[0] < 25){
+    return ((team1.x[time] < 25) && !(team1.x[time] < 25))
+  } else {
+    return ((team1.x[time] < 25) && !(team1.x[time] < 25))
+  }
+}
+
+function getMin(array) {
+  let minimum = 1000;
+  for (let i = 0; i < array.length; i++) {
+    if (array[i] < minimum) {
+      minimum = array[i];
+    }
+  }
+  return minimum;
+}
+
+function getMax(array) {
+  let maximum = 0;
+  for (let i = 0; i < array.length; i++) {
+    if (array[i] > maximum) {
+      maximum = array[i];
+    }
+  }
+  return maximum;
+}
+
+let team0 = new team(json["alliances"]["blue"]["0"], "rgb(0,107,112)", true);
+let team1 = new team(json["alliances"]["blue"]["1"], "rgb(0,38,112)", true);
+let team2 = new team(json["alliances"]["blue"]["2"], "rgb(15,0,112)", true);
+let team3 = new team(json["alliances"]["red"]["0"], "rgb(255,72,154)", false);
+let team4 = new team(json["alliances"]["red"]["1"], "rgb(255,18,0)", false);
+let team5 = new team(json["alliances"]["red"]["2"], "rgb(255,128,0)", false);
+
+let teams = [
+  team0,
+  team1,
+  team2,
+  team3,
+  team4,
+  team5
+];
+
+
+
+/********************************************/
 /*                PICKLISTS                 */
 /********************************************/
 
