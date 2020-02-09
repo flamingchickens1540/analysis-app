@@ -15,15 +15,15 @@ const OUR_TEAM = "1540"; // put your team number here!
 let dialogs_opts = {}
 const dialogs = require("dialogs")(dialogs_opts)
 
-// the year of this game
-let year = 2020;
-
 // are photos currently visible?
 let photos = false;
 
 /********************************************/
 /*        LOADING GAME SPECIFIC INFO        */
 /********************************************/
+
+// the year of this game
+let year = 2020;
 
 // script for the 2020 game
 let gameScript = require("./years/2020/game-script.js");
@@ -217,13 +217,16 @@ function loadNotesData() {
     let file_name = manifest_notes[data_id]; // 5-135935359979.json (the second # is just for getting rid of duplicates)
     if (fs.existsSync("./data/notes/" + file_name)) {
       let data_point = JSON.parse(fs.readFileSync("./data/notes/" + file_name));
-      let dp_match = data_point["match"];
+      let dp_match = data_point["info"]["match"];
       // finds what teams are in the data
       for (let team_index in schedule[dp_match]) {
         let team_name = schedule[dp_match][team_index];
         // if this is first data point recorded for this team
         if (notes_data[team_name] === undefined) { notes_data[team_name] = []; }
-        notes_data[team_name].push([data_point[team_index.toString()], dp_match]);
+        let new_data = data_point["notes"][team_index.toString()];
+        if (new_data != "") {
+          notes_data[team_name].push([new_data, dp_match]);
+        }
       }
     }
   }
@@ -889,66 +892,57 @@ function addData() {
   }
   // adds in stand data
   addStandDataToPage();
-  // adding average/mean/max to btn-div (non match-specific)
-  addOverallStatsToPage();
-  // adds in notes data
-  addNotesToPage();
-  // view data button functionality
-  addDataToViewDataButton();
-  // hides sensitive info if applicable
-  displaySensitiveInfo();
 }
-
 
 // adds stand data to team page
 function addStandDataToPage() {
-  // loops through each match
-  for (let match_id in stand_data[selected_team]) {
-    let match = stand_data[selected_team][match_id];
+  // looks at each match for the selected team separately
+  Promise.all(stand_data[selected_team].map((match) => {
     let match_number = gameScript.standJSON.getMatchNumber(match);
     // the HTML which will be appended to the <tbody>
-    let append_html = `<tr class="team-pg-match" match="` + match_number + `"><td>` + match_number + `</td>`;
-    if (gameScript.standJSON.getLogin(match) !== undefined) {
-      // adds the scout name to the large table
-      append_html += `<td class="scout-td">` + scouts[gameScript.standJSON.getLogin(match)] +`</td>`;
-    } else {
-      // continue; // if there is no scout, the data is discarded (gasp)
-    }
-    // for each value that is supposed to appear in the table (see table_values)
-    for (let value in table_values) {
-      // name of the value in array table_values
-      let header = table_values[value];
-      // what will be displayed
-      let display = match[header];
-      // based on specific game details, chooses display for table
-      display = gameScript["table_details"][header](match);
-      // adds it to the html
-      append_html += `<td>` + display + `</td>`;
-    }
-    // adds score to row
-    append_html += `<td>` + gameScript.general.calculateScore(match) + `</td>`;
-    // adds notes to row
-    append_html += `<td class="sensitive" id="notes-` + selected_team + `-` + gameScript.standJSON.getMatchNumber(match) + `">` + match["Notes"]["Notes"] + `</td>`;
-    // creates buttons above table
-    let button_values_keys = Object.keys(button_values);
-    for (let btn in button_values_keys) {
-      let btn_title = button_values_keys[btn];
-      // addMatchRowToButton adds game details to the butoon btn_title
-      addMatchRowToButton(btn_title, match);
-    }
-    // where the view button will go
-    append_html += `
-      <td id="view-data-cell-` + match_id + `"></td>
-      </tr>
-    `;
-    // adds html to body
-    $("#indv-team-body").append(append_html);
-    // creates view buttons
-    createButton("view" + match_id, "&#8594", ["question", "answer"], "btn-success", "#view-data-cell-" + match_id);
-  }
-  // when you click on the match, you go to the match page
-  $(".team-pg-match").click(function() {
-    switchPages("match-summary", undefined, $(this).attr("match"), 1);
+    let append_html = `<tr class="team-pg-match team-pg-match-` + match_number +  `" match="` + match_number + `"><td class="team-pg-match-number" match="` + match_number + `"><button class="btn btn-primary">` + match_number + `</button></td>`;
+    // adds the scout name to the large table
+    append_html += `<td class="scout-td">` + scouts[gameScript.standJSON.getLogin(match)] +`</td>`;
+    Promise.all(table_values.map((header) => {
+      return gameScript["table_details"][header](match);
+    })).then((result) => {
+      for (let value in result) {
+        append_html += `<td>` + result[value] + `</td>`;
+      }
+      // adds score to row
+      append_html += `<td>` + gameScript.general.calculateScore(match) + `</td>`;
+      // adds notes to row
+      append_html += `<td class="sensitive" id="notes-` + selected_team + `-` + gameScript.standJSON.getMatchNumber(match) + `">` + match["Notes"]["Notes"] + `</td>`;
+      // creates buttons above table
+      let button_values_keys = Object.keys(button_values);
+      for (let btn in button_values_keys) {
+        let btn_title = button_values_keys[btn];
+        // addMatchRowToButton adds game details to the butoon btn_title
+        addMatchRowToButton(btn_title, match);
+      }
+      // where the view button will go
+      append_html += `
+        <td id="view-data-cell-` + match_number + `"></td>
+        </tr>
+      `;
+      // adds html to body
+      $("#indv-team-body").append(append_html);
+      // creates view buttons
+      createButton("view" + match_number, "&#8594", ["question", "answer"], "btn-success", "#view-data-cell-" + match_number);
+    });
+  })).then((result) => {
+    // adds in notes data
+    addNotesToPage();
+    // view data button functionality
+    addDataToViewDataButton();
+    // adding average/mean/max to btn-div (non match-specific)
+    addOverallStatsToPage();
+    // hides sensitive info if applicable
+    displaySensitiveInfo();
+    // when you click on the match, you go to the match page
+    $(".team-pg-match-number").click(function() {
+      switchPages("match-summary", undefined, $(this).attr("match"), 1);
+    });
   });
 }
 
@@ -1039,12 +1033,20 @@ function addOverallStatsToPage() {
 function addSummaryRankingsToTeamPage(team) {
   let summaryText = "";
   let categories = Object.keys(gameScript.summary_values);
-  for (let category_id in categories) {
-    let category = categories[category_id];
+  Promise.all(categories.map((category) => {
     let calculateScore = gameScript.summary_values[category];
-    summaryText += (category + ": <b>" + roundto100th(calculateScore(team)) + "</b> | ");
-  }
-  $("#team-summary-stats").html(summaryText.slice(0, -3));
+    return calculateScore(team).then((res) => {
+      return roundto100th(res);
+    });
+  })).then((res) => {
+    $("#team-summary-stats").html("");
+    for (let value_id in res) {
+      let stat_value = res[value_id];
+      $("#team-summary-stats").append(`
+        <input type="button" class="green-stat-btn" value="` + categories[value_id] + `: ` + stat_value + `" />
+      `);
+    }
+  });
 }
 
 // adds notes to team page
@@ -1213,7 +1215,7 @@ function addButtonOverallStat(code, stat_name, stat_value) {
   }
   // adds stat to div previously added
   $(".tbody-btn-div-" + code).append(`
-    <input type="button" class="modal-btn" value="` + stat_name + `: ` + stat_value + `" />
+    <input type="button" class="green-stat-btn" value="` + stat_name + `: ` + stat_value + `" />
   `);
 }
 
@@ -1327,8 +1329,12 @@ function populateScouts() {
 // adds a specific team to a table on the ranking page
 function addTeamToRankingTable(team_num, score, rank) {
   $("#ranking-row-" + rank).append(`
-    <td class="ranking-team-` + team_num + `"><strong>` + team_num + `</strong> (` + roundto100th(score) + `)</td>
+    <td class="ranking-team-` + team_num + `-` + rank + ` ranking-team-` + team_num + `"><strong>` + team_num + `</strong> (` + roundto100th(Math.abs(score)) + `)</td>
   `);
+  // makes each team clickable to send them to their respective team pages
+  $(".ranking-team-" + team_num + "-" + rank).click(function() {
+    switchPages("team", team_num, undefined, 1);
+  });
 }
 
 // creates a ranking row for the table
@@ -1354,42 +1360,448 @@ function addRankingsToPage() {
   // creates a row for each team
   for (let team_id in teams) { addRankingRow(team_id); }
   // runs for each ranking from the game-script
-  for (let categoryId in categories) {
-    let category_name = categories[categoryId];
-    // adds a category to the ranking table
-    addCategoryToRankings(gameScript.ranking_values[category_name]);
-  }
-  // makes each team clickable to send them to their respective team pages
-  for (let team_id in teams) {
-    // each team when pressed switches the page
-    $(".ranking-team-" + teams[team_id]).click(function() {
-      switchPages("team", teams[team_id], undefined, 1);
-    });
-  }
-}
-
-// adds a category to the rankingTable
-function addCategoryToRankings(categoryTest) {
-  // an array of arrays of team numbers and scores
-  let teamsAndScores = sortTeamsByCategory(categoryTest);
-  for (let team_id in teamsAndScores) {
-    let data = teamsAndScores[team_id];
-    // adds a team to the table given their team name, score, and rank
-    addTeamToRankingTable(data[0], data[1], team_id);
-  }
+  Promise.all(categories.map((category_name) => {
+    return sortTeamsByCategory(gameScript.ranking_values[category_name]);
+  })).then((result) => {
+    // adds each data point to the rankingTable
+    for (let category_id in result) {
+      let category = result[category_id];
+      for (let team_id in category) {
+        let data = category[team_id];
+        addTeamToRankingTable(data[0], data[1], team_id);
+      }
+    }
+  });
 }
 
 // sorts all teams by a category
 function sortTeamsByCategory(categoryTest) {
-  let teamsAndScores = []
-  for (let team_id in teams) {
-    let team_num = teams[team_id];
+  return Promise.all(teams.map((team_num) => {
     // gets rid of teams without data
-    if (Object.keys(stand_data).indexOf(team_num) < 0) { continue; }
-    teamsAndScores.push([parseInt(team_num), categoryTest(team_num)]);
+    if (!(team_num in stand_data)) { return Promise.resolve(undefined); }
+    return categoryTest(team_num).then(res => {
+      return [parseInt(team_num), res];
+    });
+  })).then(function(teamsAndScores) {
+    // filters out undefined values
+    teamsAndScores = teamsAndScores.filter((value) => value !== undefined);
+    // merge sort, but instead of merge it is bubble
+    teamsAndScores = teamsAndScores.sort((a, b) => b[1] - a[1]);
+    return teamsAndScores;
+  });
+}
+
+/********************************************/
+/*                ELIMS PAGE                */
+/********************************************/
+
+let elims_alliances = {}
+let elims_tree = {}
+let elims_matches = {}
+
+let alliances_selected = false;
+
+var d3 = require("d3");
+
+function toArray(item, arr) {
+  arr = arr || [];
+  var i = 0, l = item.children?item.children.length:0;
+  arr.push(item);
+  for(; i < l; i++){
+    toArray(item.children[i], arr);
   }
-  teamsAndScores = teamsAndScores.sort((a, b) => b[1] - a[1]);
-  return teamsAndScores;
+  return arr;
+};
+
+function drawElimsTree(source) {
+
+  $("#elimsTree").html("");
+
+  var margin = {top:10, right:50, bottom:10, left:50},
+      width = $(document).width() - margin.left - margin.right,
+      halfWidth = width / 2,
+      height = 400,
+      i = 0,
+      duration = 0;
+
+  var getChildren = function(d){
+    var a = [];
+    if (d.winners) for (var i = 0; i < d.winners.length; i++) {
+      d.winners[i].parent = d;
+      a.push(d.winners[i]);
+    }
+    return a.length?a:null;
+  };
+
+  var tree = d3.layout.tree()
+      .size([height, width])
+      ;
+
+  var diagonal = d3.svg.diagonal()
+      .projection(function(d) { return [d.y, d.x]; });
+  var connector = function (d) {
+        var source = calcLeft(d.source);
+        var target = calcLeft(d.target);
+        var hy = (target.y - source.y) / 2;
+        return "M" + source.y + "," + source.x
+               + "H" + (source.y + hy)
+               + "V" + target.x + "H" + target.y;
+      };
+
+  let calcLeft = function(d) {
+    var l = d.y;
+    l = d.y - halfWidth;
+    l = halfWidth - l;
+    return {x : d.x, y : l};
+  };
+
+  var vis = d3.select("#elimsTree").append("svg")
+    .attr("width", width + margin.right + margin.left)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  elims_tree["x0"] = height / 2;
+  elims_tree["y0"] = width / 2;
+
+  let t1 = d3.layout.tree().size([height, halfWidth]);
+  t1.children(function(d) { return d.winners; });
+  t1.nodes(elims_tree);
+
+  let rebuildChildren = function(node){
+    node.children = getChildren(node);
+    if (node.children) node.children.forEach(rebuildChildren);
+  }
+
+  rebuildChildren(elims_tree);
+
+  // Compute the new tree layout.
+
+  let nodes = toArray(source);
+
+  // Normalize for fixed-depth.
+  nodes.forEach(function(d) { d.y = d.depth * $(document).width()/3.6 + $(document).width()/12; });
+
+  // Update the nodes…
+  let node = vis.selectAll("g.node")
+      .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+  // Enter any new nodes at the parent's previous position.
+  var nodeEnter = node.enter().append("g")
+      .attr("class", "node")
+      .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+
+  // the circle node
+  nodeEnter.append("circle")
+      .attr("r", 1e-6)
+      .style("fill", function(d) { return d.round === "alliance" ? d.winnerColor : "white" });
+      // .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+  // displaying the alliance num + teams
+  nodeEnter.append("text")
+      .attr("dy", function(d) { return -8; })
+      .attr("dx", function(d) { return -3; })
+      // .attr("text-anchor", "middle")
+      .text(function(d) { return d.name; });
+
+  // winner arrow
+  nodeEnter.append("text")
+    .html("&#8594;")
+    .attr("dx", function(d) {
+      if ($(document).width() > 1100) {
+        return $(document).width()/9.5 + 20;
+      } else {
+        return -5
+      }
+    })
+    .attr("dy", function(d) {
+      if ($(document).width() > 1100) {
+        return -7;
+      } else {
+        return 15;
+      }
+    })
+    .style("display", function(d) {
+      if (d.round === "finals") {
+        return "none";
+      } else {
+        return "inline";
+      }
+    })
+    // .style("color", function(d) { return d.winnerColor; })
+    .attr("class", "win-arrow");
+
+
+  // Transition nodes to their new position.
+  var nodeUpdate = node.transition()
+      .duration(duration)
+      .attr("transform", function(d) { let p = calcLeft(d); return "translate(" + p.y + "," + p.x + ")"; });
+
+  nodeUpdate.select("circle")
+      .attr("r", 4.5)
+      // .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+
+  // Update the links...
+  var link = vis.selectAll("path.link")
+      .data(tree.links(nodes), function(d) { return d.target.id; });
+
+  // Enter any new links at the parent's previous position.
+  link.enter().insert("path", "g")
+      .attr("class", "link")
+      .attr("d", function(d) {
+        var o = {x: source.x0, y: source.y0};
+        return connector({source: o, target: o});
+      });
+
+  // Transition links to their new position.
+  link.transition()
+      .duration(duration)
+      .attr("d", connector);
+
+  // Transition exiting nodes to the parent's new position.
+  link.exit().transition()
+      .duration(duration)
+      .attr("d", function(d) {
+        var o = calcLeft(d.source||source);
+        o.y += halfWidth - (d.target.y - d.source.y);
+        return connector({source: o, target: o});
+      })
+      .remove();
+
+  // Stash the old positions for transition.
+  nodes.forEach(function(d) {
+    var p = calcLeft(d);
+    d.x0 = p.x;
+    d.y0 = p.y;
+  });
+  $(".win-arrow").click(function() {
+    winMatch($(this)[0].parentElement);
+  });
+  $("circle").click(function() {
+    let data = $(this)[0].parentElement.__data__;
+    if (data.round === "alliance") { return; }
+    for (let childNodeID in data.children) {
+      if (data.children[childNodeID].name === "?") { alert("To view this match, there needs to be two competing alliances."); return; }
+    }
+    switchPages("match-summary", undefined, data.round + "-" + data.number, 1);
+  });
+}
+
+function winMatch(node) {
+  // the node element for the child
+  let childElement = node;
+  // the node data for the child
+  let childNode = childElement.__data__;
+  // the node data for the parent
+  let parentNode = childNode.parent;
+  if (parentNode === undefined) { return false; }
+  $(".node").each(function() {
+    if (sameNode($(this)[0].__data__, parentNode)) {
+      $(this)[0].children[1].textContent = childNode.name;
+      parentNode.name = childNode.name;
+      parentNode.alliance = childNode.alliance;
+      $(this)[0].children[0].style["fill"] = parentNode.winnerColor;
+    }
+  });
+  fillElimsMatches();
+}
+
+// checks if two match nodes are the same
+function sameNode(x, y) {
+  return x["number"] === y["number"] && x["round"] === y["round"];
+}
+
+// fills the elims_matches object
+function fillElimsMatches() {
+  setElimsMatchDefault();
+  $(".node").each(function() {
+    let node = $(this)[0].__data__;
+    if (node.round !== "alliance") {
+      if (node.children[0].name !== "?" && node.children[1].name !== "?") {
+        for (let childNodeID in node.children) {
+          let childNode = node.children[childNodeID];
+          // checks to see if it already has an alliance
+          if (childNode.alliance != 0) {
+            if (!(node.number in elims_matches[node.round])) { elims_matches[node.round][node.number] = [] }
+            // creates a shallow copy of the teams - e.g. [1540, 2471, 4488]
+            let alliance_teams = Object.assign([], elims_alliances[childNode.alliance]);
+            // reverses the list so that prepended will add them in order
+            if (childNode.winnerColor === "red") {
+              alliance_teams = alliance_teams.reverse();
+            }
+            for (let alliance_team_id in alliance_teams) {
+              // e.g. 1540
+              let alliance_team = alliance_teams[alliance_team_id];
+              // finally actually adds it to the list
+              if (childNode.winnerColor === "red") {
+                // puts value in at beginning of array
+                elims_matches[node.round][node.number].unshift(alliance_team);
+              } else {
+                // puts value in at end of array
+                elims_matches[node.round][node.number].push(alliance_team);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+//sets up all the elims HTML
+function setupEliminationsPage() {
+  $("#allianceInputDiv").append(`
+      <div class="col-2"></div>
+      <div class="col-2 alliance-input-0"></div>
+      <div class="col-2 alliance-input-1"></div>
+      <div class="col-2 alliance-input-2"></div>
+      <div class="col-2 alliance-input-3"></div>
+      <div class="col-2"></div>
+  `);
+  // adding the alliances
+  for (let alliance_num = 1; alliance_num < 9; alliance_num += 1) {
+    let inputColumn = (alliance_num - 1) % 4;
+    $(".alliance-input-" + inputColumn).append(`
+      <div rank="` + alliance_num + `" class="elims-alliance-input elims-alliance-input-` + alliance_num + `">
+        <p class="elims-alliance-title">Alliance ` + alliance_num + `</p>
+      </div>
+      <br />
+    `);
+    // adding the inputs for putting in alliance members
+    for (let i = 1; i < 5; i += 1) {
+      let placeholder = i == 4 ? "4 (backup)":i;
+      $(".elims-alliance-input-" + alliance_num).append(`
+        <input class="elims-alliance-team-input elim-` + alliance_num + `-` + i + `" type="text" placeholder="` + placeholder + `" />
+      `);
+    }
+  }
+  // Loads alliances.json
+  if (fs.existsSync("./resources/alliances.json")) {
+    elims_alliances = JSON.parse(fs.readFileSync("./resources/alliances.json"));
+    loadElimsAlliances();
+    generateElimsMatches();
+  }
+}
+
+function addChildToTree(parent, text, number, winnerColor, alliance) {
+  let order = ["finals", "semifinals", "quarterfinals", "alliance"];
+  parent["winners"].push(
+    {
+      "name": text,
+      "round": order[order.indexOf(parent["round"]) + 1],
+      "number": number,
+      "winnerColor": winnerColor,
+      "alliance": alliance,
+      "winners": [],
+    }
+  )
+}
+
+function getChildByColor(parent, color) {
+  return parent["winners"].find(x => x.winnerColor === color);
+}
+
+function loadElimsAlliances() {
+  let alliances = Object.keys(elims_alliances);
+  for (let alliance_id in alliances) {
+    let alliance = alliances[alliance_id];
+    let alliance_teams = elims_alliances[alliance];
+    for (let team_id in alliance_teams) {
+      let team_num = alliance_teams[team_id];
+      let class_id = parseInt(team_id) + 1;
+      $(".elim-" + alliance + "-" + class_id).val(team_num);
+    }
+  }
+}
+
+function setElimsDefaults() {
+  elims_alliances = {}
+  elims_tree = {
+    "name": "?",
+    "round": "finals",
+    "number": 1,
+    "winnerColor": "green",
+    "alliance": 0,
+    "winners": []
+  }
+  setElimsMatchDefault();
+}
+
+function setElimsMatchDefault() {
+  elims_matches = {
+    "quarterfinals": {},
+    "semifinals": {},
+    "finals": {}
+  }
+}
+
+function createBracket() {
+  // create semis matches
+  addChildToTree(elims_tree, "?", 1, "red", 0);
+  addChildToTree(elims_tree, "?", 2, "blue", 0);
+  // create quals matches
+  for (let x = 1; x < 5; x += 1) {
+    // what color will this alliance be if they make it to finals
+    let winnerColor = x <= 2 ? "red" : "blue";
+    let parentNode = getChildByColor(elims_tree, winnerColor);
+    // what color will this alliance be
+    let color = x % 2 == 0 ? "blue" : "red";
+    addChildToTree(parentNode, "?", x, color, 0);
+  }
+  // create alliances
+  let alliance_order = [1, 8, 4, 5, 2, 7, 3, 6];
+  for (let alliance_id in alliance_order) {
+    let alliance_num = alliance_order[alliance_id];
+    // color of the alliance
+    let allianceColor = alliance_num <= 4 ? "red" : "blue";
+    // what color will they be if they make it to finals
+    let finalsColor = alliance_id <= 3 ? "red" : "blue";
+    let semisParentNode = getChildByColor(elims_tree, finalsColor);
+    // what color will they be if they make it to semis
+    let semisColor = ([1, 8, 2, 7].indexOf(alliance_num) >= 0) ? "red" : "blue";
+    let parentNode = getChildByColor(semisParentNode, semisColor);
+    let displayText = alliance_num;
+    if (alliance_num in elims_alliances) {
+      displayText = alliance_num + ". " + elims_alliances[alliance_num].filter(x => x !== undefined).join(", ");
+    }
+    addChildToTree(parentNode, displayText, alliance_num, allianceColor, alliance_num);
+  }
+}
+
+// when you click on the generate matches button, fills up the elims_alliances object
+function generateElimsMatches() {
+  setElimsDefaults();
+  // goes through each alliance
+  for (let x = 1; x < 9; x += 1) {
+    // goes through each member
+    for (let i = 1; i < 5; i += 1) {
+      let team_number = $(".elim-" + x + "-" + i).val();
+      if (team_number != "") {
+        // if no stand data on it, assume the team is not at event, and break out of function
+        if (!(team_number in stand_data)) {
+          alert("There is no team " + team_number + "at this event.");
+          return false;
+        } else {
+          // adding it to the elims_alliances object
+          if (!(x.toString() in  elims_alliances)) {
+            elims_alliances[x.toString()] = [];
+          }
+          elims_alliances[x.toString()].push(team_number);
+        }
+      } else {
+        elims_alliances[x.toString()].push(undefined);
+      }
+    }
+    elims_alliances[x.toString()].sort();
+  }
+  $(".elim-match-row").show();
+  alliances_selected = true;
+  createBracket();
+  drawElimsTree(elims_tree);
+  fillElimsMatches();
+  $("#allianceDisplayDiv").show();
+  $(".generate-bracket").val("Regenerate Bracket");
 }
 
 /********************************************/
@@ -1403,40 +1815,60 @@ const roles = ["r1", "r2", "r3", "b1", "b2", "b3"];
 
 // loc is the location to add the match to
 // team is the selected_team
-function createMatch(loc, match_number, team) {
+// round is either "quals", "quarterfinals", "semifinals", or "finals"
+function createMatch(loc, match_number, team, round) {
+  // the text to be displayed representing the match
+  let display_text;
+  // the list of teams in the match
+  let match_teams;
+  // a specific code for each match passed to the summary button
+  let match_code;
+  // changes some info if it is an elims match rather than a quals match
+  if (round == "quals") {
+    display_text = match_number;
+    match_teams = schedule[match_number.toString()];
+    match_code = match_number;
+  } else {
+    display_text = capitalize(round).slice(0, -1) + " " + match_number;
+    match_teams = elims_matches[round][match_number];
+    match_code = round + "-" + match_number;
+  }
+  let num_teams_for_alliance = match_teams.length / 2;
   // html to append to loc
   let append_html = `
     <div style="text-align:center">
-      <h3>` + match_number + `</h3>
+      <h3>` + display_text + `</h3>
       <div>`;
   // for each team in the match
-  for (let team_index in schedule[match_number.toString()]) {
+  for (let team_index in match_teams) {
     // e.g. "1540"
-    let displayed_team = schedule[match_number.toString()][team_index];
-    // classes for the btn
-    let btn_type = "btn-danger";
-    // if team_index > 2, they are on the blue alliance, hence btn-primary
-    if (team_index > 2) { btn_type = "btn-primary"; }
-    // if team is our team, make it a different class
-    if (displayed_team == OUR_TEAM) { btn_type += " our-team-btn"; }
-    // if team is selected_team, make it green but also display-team-btn
-    else if (displayed_team == team) { btn_type = "btn-success display-team-btn"; }
-    // that btn is about to be appended!
-    append_html += `<button class="btn ` + btn_type + ` match-team-btn match-team-btn-` + match_number + `"><div style="position:relative" class="m` + match_number + `-` + displayed_team + `">` + displayed_team + `</div></button>`;
+    let displayed_team = match_teams[team_index];
+    if (displayed_team !== undefined) {
+      // classes for the btn
+      let btn_type = "btn-danger";
+      // if team_index > 2, they are on the blue alliance, hence btn-primary
+      if (team_index >= num_teams_for_alliance) { btn_type = "btn-primary"; }
+      // if team is our team, make it a different class
+      if (displayed_team == OUR_TEAM) { btn_type += " our-team-btn"; }
+      // if team is selected_team, make it green but also display-team-btn
+      else if (displayed_team == team) { btn_type = "btn-success display-team-btn"; }
+      // that btn is about to be appended!
+      append_html += `<button class="btn ` + btn_type + ` match-team-btn match-team-btn-` + match_code + `"><div style="position:relative" class="m` + match_code + `-` + displayed_team + `">` + displayed_team + `</div></button>`;
+    }
     // create a new row for the btns for the blue alliance
-    if (team_index == 2) { append_html += `</div><div>`; }
+    if (team_index == (num_teams_for_alliance - 1)) { append_html += `</div><div>`; }
   }
   append_html += `</div>
-    <button style="margin-top:2px" class="btn btn-light summary-` + match_number + `">Summary</button>
+    <button style="margin-top:2px" class="btn btn-light summary-` + match_code + `">Summary</button>
   </div>`;
   // actually adds the html
   $(loc).append(append_html);
   // go to match summaries
-  $(".summary-" + match_number).click(function() {
-    switchPages("match-summary", undefined, match_number, 1);
+  $(".summary-" + match_code).click(function() {
+    switchPages("match-summary", undefined, match_code, 1);
   });
   // makes the btn switch pages
-  $(".match-team-btn-" + match_number).click(function() {
+  $(".match-team-btn-" + match_code).click(function() {
     switchPages("team", $(this).text(), undefined, 1);
   });
 }
@@ -1455,17 +1887,20 @@ function showCollectedMatches() {
 }
 
 // predicts the score of a match
-function predictMatch(match_number) {
+function predictMatch(match_teams) {
   let red_alliance = 0;
   let blue_alliance = 0;
-  for (let team_index in schedule[match_number.toString()]) {
-    let team = schedule[match_number.toString()][team_index];
+  for (let team_index in match_teams) {
+    let team = match_teams[team_index];
+    if (team === undefined) {continue;}
+    // ignores backup robots from predicted score
+    if (match_teams.length == 8 && team_index % 4 == 3) { continue; }
     // a list of scores
     let scores = allScoresForTeam(team, gameScript.general.calculateScore);
     // mean score
     let mean = roundto100th(jStat.mean(scores));
     // adds it to correct alliance
-    if (team_index <= 2) {
+    if (team_index < (match_teams.length / 2)) {
       red_alliance += mean;
     } else {
       blue_alliance += mean;
@@ -1477,6 +1912,9 @@ function predictMatch(match_number) {
 // display matches for a team
 // if "team" is undefined, all teams will be displayed
 function displayMatchesForTeam(team) {
+  if (alliances_selected) {
+    displayElimsMatches();
+  }
   let matches_to_display = [];
   let schedule_keys = Object.keys(schedule);
   // if team is undefined, go through each match
@@ -1498,24 +1936,47 @@ function displayMatchesForTeam(team) {
   // display match for each match in matches_to_display
   for (let match_index in matches_to_display) {
     // ".match-col-"+match_index%3 is where the match will be appended, in one of three columns
-    createMatch(".match-col-" + match_index % 3, matches_to_display[match_index], team);
+    createMatch(".match-col-" + match_index % 3, matches_to_display[match_index], team, "quals");
   }
   showCollectedMatches();
 }
 
+// displays all the elims matches
+function displayElimsMatches() {
+  let num_matches = 0;
+  // quartefinals, semifinals, finals
+  let rounds = Object.keys(elims_matches);
+  for (let round_id in rounds) {
+    // e.g. semifinals
+    let round = rounds[round_id];
+    // {"1":[], "2":[], etc.}
+    let round_matches = elims_matches[round];
+    // round_numbers = [1, 2, 3, 4]
+    let round_numbers = Object.keys(round_matches);
+    for (let round_num_id in round_numbers) {
+      // e.g. 2
+      let round_number = round_numbers[round_num_id];
+      let round_teams = round_matches[round_number];
+      createMatch(".elim-match-col-" + num_matches % 3, round_number, undefined, round)
+      num_matches += 1;
+    }
+  }
+}
+
 //sets up all the match summary HTML
 function setupMatchSummaryPage() {
-  for (let x = 1; x < 4; x += 1) {
+  let tempRoles = ["r1","r2","r3","r4","b1","b2","b3","b4"];
+  for (let x = 1; x < 5; x += 1) {
     $("#match-summary").append(`<div class="row summary-row summary-row-` + x + `"></div>`);
     $(".summary-row-" + x).html(`
       <div class="col-1"></div>
-      <div class="col-5 match-summary-red match-summary-col match-summary-col-r` + x + `"></div>
-      <div class="col-5 match-summary-blue match-summary-col match-summary-col-b` + x + `"></div>
+      <div role="` + (x-1) + `" class="col-5 match-summary-red match-summary-col match-summary-col-r` + x + `"></div>
+      <div role="` + (x+2) + `" class="col-5 match-summary-blue match-summary-col match-summary-col-b` + x + `"></div>
       <div class="col-1"></div>
     `);
   }
-  for (let role_index in roles) {
-    let role = roles[role_index];
+  for (let role_index in tempRoles) {
+    let role = tempRoles[role_index];
     let alliance = role[0] == "r" ? "red":"blue";
     $(".match-summary-col-" + role).append(`
       <h3 class="match-summary-team match-summary-team-` + role + `">Regular Team</h3>
@@ -1524,37 +1985,55 @@ function setupMatchSummaryPage() {
       <div class="summary-image-div"><img class="summary-image summary-image-` + alliance + ` summary-image-` + role + `" /></div>
     `);
   }
+  // going from match summary page to team page
+  $(".match-summary-col").click(function() {
+    let role_id = $(this).attr("role");
+    switchPages("team", schedule[selected_match][role_id], undefined, 1);
+  });
 }
 
 // displays the summary for a match
 function displayMatchSummary(match_number) {
+  let tempRoles, match, display_text;
   // sets the global selected match
   selected_match = match_number;
-  // tba link!
-  if (comp["key"] != "test") {
-    tbaMatchLink = "https://www.thebluealliance.com/match/" + comp["key"] + "_qm" + match_number;
+  // if true, the match is a quals match, if false, then it isn't a quals match and is in the format "quarterfinals-3"
+  if (Number.isInteger(parseInt(match_number))) {
+    // STUFF FOR QUALS MATCHES ONLY
+    tempRoles = roles;
+    match = schedule[match_number];
+    display_text = "Match " + match_number;
+    // tba link!
+    if (comp["key"] != "test") {
+      tbaMatchLink = "https://www.thebluealliance.com/match/" + comp["key"] + "_qm" + match_number;
+      $(".view-on-tba").show();
+    } else {
+      $(".view-on-tba").hide();
+    }
+    $(".match-summary-col-r4").hide();
+    $(".match-summary-col-b4").hide();
+  } else {
+    // STUFF FOR ELIMS MATCHES ONLY
+    tempRoles = ["r1","r2","r3","r4","b1","b2","b3","b4"];
+    $(".view-on-tba").hide();
+    let round = match_number.split("-")[0];
+    let number = match_number.split("-")[1];
+    match = elims_matches[round][number];
+    display_text = capitalize(round).slice(0, -1) + " " + number;
   }
-  $(".match-number").text("Match " + match_number);
-  let match = schedule[match_number];
-  let predicted_scores = predictMatch(match_number);
+  $(".match-number").text(display_text);
+  let predicted_scores = predictMatch(match);
   $(".expected-score").html(`Predicted: <span style="color:red">` + predicted_scores[0] + `</span> - <span style="color:blue">` + predicted_scores[1] + `</span>`);
   // sets team info for each team
-  for (let team_index in roles) {
-    let role = roles[team_index];
+  for (let team_index in teams) {
+    let role = tempRoles[team_index];
     let team_id = match[team_index];
+    if (team_id === undefined) { $(".match-summary-col-" + role).hide(); continue; }
+    else { $(".match-summary-col-" + role).show(); }
     let team_name = team_id_to_name[team_id];
     $(".match-summary-col-" + role).attr("team", team_id);
     $(".match-summary-team-" + role).text(team_id + " - " + team_name);
     $(".match-summary-team-info-" + role).html("");
-    // list of column titles
-    let categories = Object.keys(gameScript.summary_values);
-    for (let category_id in categories) {
-      let category = categories[category_id];
-      let calculateScore = gameScript.summary_values[category];
-      $(".match-summary-team-info-" + role).append(`
-        <h5>` + category + ` - ` + roundto100th(calculateScore(team_id)) + `</h4>
-      `);
-    }
     // adds a checkmark if this match data has been collected
     if (team_id in stand_data && stand_data[team_id].find(o => o["info"]["match"] == match_number) !== undefined) {
       $(".match-summary-" + role + "-check").show();
@@ -1564,6 +2043,16 @@ function displayMatchSummary(match_number) {
     if (image_data[team_id].length >= 0) {
       $(".summary-image-" + role).attr("src", image_data[team_id][0]);
     }
+    // list of column titles
+    let categories = Object.keys(gameScript.summary_values);
+    Promise.all(categories.map((category) => {
+      let calculateScore = gameScript.summary_values[category];
+      calculateScore(team_id).then((result) => {
+        $(".match-summary-team-info-" + role).append(`
+          <h5>` + category + ` - ` + roundto100th(result) + `</h4>
+        `);
+      });
+    }));
   }
 }
 
@@ -1612,7 +2101,7 @@ function setupStatsTable() {
 function updateStatsTable(team_number, alignment) {
   // makes sure there is enough data to run a t-test
   if (!(team_number in stand_data) || stand_data[team_number].length <= 1) {
-    alert("Not enough data on this team!");
+    alert("You need at least two data points to run this test.");
     return false;
   }
   // team previously inputted
@@ -1631,13 +2120,11 @@ function updateStatsTable(team_number, alignment) {
     for (let stat_id in stats_page_values) {
       // a parameter is like "hatch" or "cargo"
       let parameter = stats_page_values[stat_id];
-      // the function that gets called by allScoresForTeam that finds all the data
-      let parameter_function = gameScript.stats_page_values[parameter];
-      // a list of all the team's scores for said parameter
-      let parameter_scores = allScoresForTeam(team_number, parameter_function);
-      // in stats_data, sets the team's scores and mean
+      // // a list of all the team's scores for said parameter
+      let parameter_scores = gameScript.stats_page_values[parameter](team_number);
+      // // in stats_data, sets the team's scores and mean
       stats_data[alignment][parameter + "_scores"] = parameter_scores;
-      stats_data[alignment][parameter] = simpleStats.mean(parameter_scores);
+      stats_data[alignment][parameter] = jStat.mean(parameter_scores);
       // displays the results
       $(".stats-" + parameter.replace(/\s+/g, '-').toLowerCase() + "-" + alignment).text(roundto100th(stats_data[alignment][parameter]));
       // confirms that there are two teams to compare
@@ -2247,10 +2734,14 @@ function onStart() {
   $(".bluetooth_display").hide();
   $(".new-bluetooth-files").hide();
   $(".summary-check").hide();
+  $("#allianceDisplayDiv").hide();
+  $(".elim-match-row").hide();
   // puts scouts on Scouts page
   populateScouts();
   // sets up the summary page
   setupMatchSummaryPage();
+  // sets up the elims page
+  setupEliminationsPage();
   // sets up the stats table for the statistics page
   setupStatsTable();
   // sets up the rankings table
@@ -2314,11 +2805,6 @@ $(document).ready(function() {
   $(".bluetooth-server").click(function() {
 	  bluetoothScript();
   });
-  // going from match summary page to team page
-  $(".match-summary-col").click(function() {
-    let team_id = $(this).attr("team");
-    switchPages("team", team_id, undefined, 1);
-  });
   // whenever we "return" in the text box
   $('.stats-input').keypress(function (e) {
     // keyCode 13 is "enter"
@@ -2329,6 +2815,9 @@ $(document).ready(function() {
       // collects the new information and displays it
       updateStatsTable(team_number, alignment);
     }
+  });
+  $(".view-scouts").click(function() {
+    switchPages("scouts", undefined, undefined, 1);
   });
   $(".toggle-photos").click(function() {
     $("#myCarousel").toggle();
@@ -2352,6 +2841,12 @@ $(document).ready(function() {
   $(".home-btn").click(function() {
     let name = $(this).attr("name");
     switchPages(name, undefined, undefined, 1);
+  });
+  // generates bracket on elims page
+  $(".generate-bracket").click(function() {
+    generateElimsMatches();
+    // saves alliances.json to the resources folder
+    fs.writeFileSync("./resources/alliances.json", JSON.stringify(elims_alliances));
   });
   // go to home page
   $(".go-to-home").click(function() {

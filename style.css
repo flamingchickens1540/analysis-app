@@ -22,6 +22,48 @@ body {
   display: inline-block;
 }
 
+.elims-alliance-input {
+  border: 1px solid black;
+  width: 100%;
+  text-align: center;
+}
+
+.elims-alliance-team-input {
+  width: 90%;
+}
+
+.elims-alliance-title {
+  position: relative;
+  top: 6px;
+}
+
+#allianceDisplayDiv {
+  height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.elim-match {
+  border: 1px solid black;
+  padding: 1px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.elim-match-alliance {
+  border: 1px solid black;
+  color: white;
+}
+
+.elim-match-alliance-red {
+  background-color: red;
+}
+
+.elim-match-alliance-blue {
+  background-color: blue;
+}
+
 .summary-check {
   position:absolute;
   top:5px;
@@ -195,7 +237,7 @@ th {
   width: 76.5vw;
 }
 
-.modal-btn {
+.green-stat-btn {
   border: 1px solid black;
   background: #70ff8a;
 }
@@ -232,6 +274,16 @@ th {
   background-color: #9933CC;
 }
 
+.btn-mage {
+  background-color: rgb(255,0,254);
+  color: white;
+}
+
+.btn-dark:hover,
+.btn-dark:focus {
+  color: white;
+}
+
 .btn-moss {
   background-color: #a1887f;
   color: white;
@@ -240,4 +292,31 @@ th {
 .btn-moss:focus {
   color: white;
   background-color: #795548;
+}
+
+.btn-honey {
+  background-color: #ffff00;
+  color: black;
+}
+
+.btn-honey:hover, .btn-honey:focus {
+  background-color: #cccc00;
+  color: black;
+}
+
+.node circle {
+  cursor: pointer;
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.node text {
+  font: 11px sans-serif;
+}
+
+path.link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1.5px;
 }

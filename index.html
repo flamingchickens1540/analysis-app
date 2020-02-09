@@ -58,7 +58,7 @@
           <button name="pit-layout" class="btn btn-lg btn-secondary home-btn">Pit Layout</button>
         </div>
         <div class = "col-sm-3">
-          <button name="scouts" class="btn btn-lg btn-danger home-btn">Scouts</button>
+          <button name="elims" class="btn btn-lg btn-danger home-btn">Eliminations</button>
         </div>
       </div>
     </div>
@@ -80,6 +80,18 @@
         <tbody class="teams-body">
         </tbody>
       </table>
+    </div>
+    <!-- eliminations page -->
+    <div style = "display:none" id = "elims" class = "page component">
+      <h3 class="margin-above">Eliminations</h3>
+      <br />
+      <input type="button" class="btn btn-primary generate-bracket" value="Generate Bracket"></input>
+      <br />
+      <br />
+      <div id="allianceDisplayDiv" class="row">
+        <div id="elimsTree"></div>
+      </div>
+      <div id="allianceInputDiv" class="row"></div>
     </div>
     <!-- scouts page -->
     <div style = "display:none" id = "scouts" class = "page component">
@@ -133,7 +145,7 @@
         <button class="btn btn-lg btn-warning toggle-photos">Toggle Photos</button>
       </div>
       <br />
-      <table style="margin-left:5%;width:90%" id="team-table" class="table table-striped">
+      <table style="border:1px solid;margin-left:5%;width:90%" id="team-table" class="table table-striped">
         <thead class="thead-dark">
           <tr id="indv-team-tr">
             <th>Match</th>
@@ -143,7 +155,6 @@
         <tbody id="indv-team-body">
         </tbody>
       </table>
-      <hr />
       <!-- Team statistics -->
       <h4 id="team-summary-stats"></h4>
     </div>
@@ -167,6 +178,15 @@
     <div style = "display:none" id = "matches" class = "page component">
       <h3 class="matches-title margin-above">Matches</h3>
       <h5 class="matches-team-display">Team 1540</h5>
+      <div class="elim-match-row row">
+        <div class="col-4 match-col elim-match-col-0">
+        </div>
+        <div class="col-4 match-col elim-match-col-1">
+        </div>
+        <div class="col-4 match-col elim-match-col-2">
+        </div>
+        <hr/>
+      </div>
       <div class="row">
         <div class="col-4 match-col match-col-0">
         </div>
@@ -269,7 +289,8 @@
         <a class="set-event dropdown-item" href="#">Change Event</a>
         <a class="clear-data dropdown-item" href="#">Clear Data</a>
         <a class="download-external-photos dropdown-item" href="#">Download External Photos</a>
-        <a class="disabled cluck-scouts dropdown-item" href="#">Load Scouts From Cluck</a>
+        <a class="disabled cluck-scouts dropdown-item" href="#">Load Scouts From CLUCK</a>
+        <a class="view-scouts dropdown-item" href="#">View Scouts</a>
       </div>
     </div>
     <input id="dir-loader" hidden type="file" webkitdirectory />

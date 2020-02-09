@@ -11,12 +11,19 @@ const TbaApiV3client = require('tba-api-v3client');
 const defaultClient = TbaApiV3client.ApiClient.instance;
 const apiKey = defaultClient.authentications['apiKey'];
 apiKey.apiKey = JSON.parse(fs.readFileSync("./resources/keys.json"))["tba-api-key"];
-const team_api = new TbaApiV3client.TeamApi();
-const event_api = new TbaApiV3client.EventApi();
 const match_api = new TbaApiV3client.MatchApi();
+const event_api = new TbaApiV3client.EventApi();
 
 let comp = JSON.parse(fs.readFileSync("./resources/event.json"));
-let schedule = JSON.parse(fs.readFileSync("./resources/schedule.json"));
+
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
 
 // calculates all of one type of score for one team and returns an array, where each match is a different value in the array
 // len(array) == num matches played by team
@@ -146,45 +153,42 @@ module.exports = {
   },
   ranking_values: {
     // calculates median cell count
-    "Cells": function(team) {
+    "Median Cells": function(team) {
       let median = jStat.median(allScoresForTeam(team, module.exports.standJSON.values.getAllCells));
-      return median;
+      return Promise.resolve(median);
     },
-    // // PCPR - Power Cell Power Ranking
-    // "PCPR": function(team) {
-    //   let team_matches = stand_data[team];
-    //   for (let match_index in team_matches) {
-    //     let match = team_matches[match_index];
-    //     let match_num = match["info"]["match"];
-    //     let role = match["info"]["role"][0];
-    //     let alliance = role == "r" ? "red":"blue";
-    //     match_api.getMatch(comp["key"] + "_qm" + match_num, {}, function(error, data, response) {
-    //       if (error) {
-    //         console.error(error);
-    //         return 0;
-    //       } else {
-    //         // until I receive a breakdown for the TBA API Score Breakdown 2020, I'm going to use random 2019 values
-    //         let num_alliance_inner_cells = data["score_breakdown"][alliance]["cargoPoints"];
-    //         let num_alliance_high_cells = data["score_breakdown"][alliance]["hatchPanelPoints"];
-    //         let num_alliance_total_high_cells = num_alliance_high_cells + num_alliance_inner_cells;
-    //         if (num_alliance_total_high_cells == 0) { return 0; }
-    //         let percentage_inner = 1.0 * num_alliance_inner_cells / num_alliance_total_high_cells;
-    //         let num_high_cells = module.exports.standJSON.values.getAllHighCells(match);
-    //         let num_inner_cells_prediction = percentage_inner * num_high_cells;
-    //         return num_inner_cells_prediction;
-    //         // for (let x = 0; x < 6; x += 1) {
-    //         //   // this checks to see if the robot is the same position as you but is on your alliance
-    //         //   if ((x % 3 + 1) != role[1] && ((alliance == "red" && x < 3) || (alliance == "blue" && x > 2))) {
-    //         //     if (fs.existsSync("./data/stand/m" + match_num + "-" + role + "-" schedule[x] + ".json")) {
-    //         //       let partner = JSON.parse(fs.readFileSync("./data/stand/m" + match_num + "-" + role + "-" schedule[x] + ".json"));
-    //         //       if (module.exports.standJSON.values.getAllHighCells(partner) >= 1) {}
-    //         //     }
-    //         //   }
-    //         // }
-    //       }
-    //     });
-    //   }
-    // },
+    // PCPR - Power Cell Power Ranking
+    "PCPR": function(team) {
+      let team_matches = stand_data[team];
+      return Promise.all(
+        team_matches.map((match) => {
+          let match_num = match["info"]["match"];
+          let role = match["info"]["role"][0];
+          let alliance = role == "r" ? "red":"blue";
+          return new Promise((resolve) => {
+            match_api.getMatch(comp["key"] + "_qm" + match_num, {}, function(error, data, response) {
+              if (error) {
+                console.error(error);
+                resolve(0);
+              } else {
+                // until I receive a breakdown for the TBA API Score Breakdown 2020, I'm going to use random 2019 values
+                let num_alliance_inner_cells = data["score_breakdown"][alliance]["cargoPoints"];
+                let num_alliance_high_cells = data["score_breakdown"][alliance]["hatchPanelPoints"];
+                let num_alliance_total_high_cells = num_alliance_high_cells + num_alliance_inner_cells;
+                if (num_alliance_total_high_cells == 0) { resolve(0); }
+                let percentage_inner = 1.0 * num_alliance_inner_cells / num_alliance_total_high_cells;
+                let num_high_cells = module.exports.standJSON.values.getAllHighCells(match);
+                let num_inner_cells_prediction = percentage_inner * num_high_cells;
+                resolve(num_inner_cells_prediction);
+              }
+            });
+          });
+        })
+      ).then(function(inner_cell_predictions) {
+        let median = jStat.median(inner_cell_predictions);
+        return Promise.resolve(median);
+      });
+    },
     // calculates number of times the robot had a level climb
     "Level Climbs": function(team) {
       let level_total = 0;
@@ -196,7 +200,7 @@ module.exports = {
         if (level == "balanced" && climb != "center") { level_total += 1; }
       }
       // calculates percentage of the time climb is level
-      return level_total;
+      return Promise.resolve(level_total);
     },
     // calculates percentage of time defense is played
     "% Defense": function(team) {
@@ -208,15 +212,54 @@ module.exports = {
       }
       // calculates percentage of the time defense is played
       let percentage = (defense_total * 100.0) / defense_scores.length;
-      return percentage;
+      return Promise.resolve(percentage);
+    },
+    // PCPR - Power Cell Power Ranking
+    "Event Ranking": function(team) {
+      return new Promise((resolve, reject) => {
+        event_api.getEventRankings(comp["key"], {}, function(error, data, response) {
+          if (error) {
+            console.error(error);
+            resolve(0);
+          } else {
+            // finds the object with the correct team name
+            let ranking = data["rankings"].find(obj => {
+              return obj["team_key"] == "frc" + team;
+            });
+            resolve(ranking["rank"]);
+          }
+        });
+      }).then((res) => {
+        // multiply by negative to make it sort in the opposite direction
+        return Promise.resolve(res*-1);
+      });
     }
   },
   // to be displayed on the team page and match summary page
   summary_values: {
+    // gets team's ranking from TBA
+    "Ranking": function(team) {
+      return new Promise((resolve, reject) => {
+        event_api.getEventRankings(comp["key"], {}, function(error, data, response) {
+          if (error) {
+            console.error(error);
+            resolve(0);
+          } else {
+            // finds the object with the correct team name
+            let ranking = data["rankings"].find(obj => {
+              return obj["team_key"] == "frc" + team;
+            });
+            resolve(ranking["rank"]);
+          }
+        });
+      }).then((res) => {
+        return res;
+      });
+    },
     // calculates median game piece count
-    "Cells": function(team) {
+    "Median Cells": function(team) {
       let median = jStat.median(allScoresForTeam(team, module.exports.standJSON.values.getAllCells));
-      return median;
+      return Promise.resolve(median);
     },
     // calculates climb percentages
     "Climb %": function(team) {
@@ -228,7 +271,7 @@ module.exports = {
       }
       // calculates percentage of the time climb succeeds
       let percentage = (climb_total * 100.0) / climb_scores.length;
-      return percentage;
+      return Promise.resolve(percentage);
     },
     // calculates percentage of time climb is level with other bots
     "Level %": function(team) {
@@ -243,11 +286,11 @@ module.exports = {
         if (level == "unbalanced" && climb != "center") { double_total += 1; }
       }
       if (double_total == 0) {
-        return 0;
+        return Promise.resolve(0);
       }
       // calculates percentage of the time climb is level
       let percentage = (level_total * 100.0) / double_total;
-      return percentage;
+      return Promise.resolve(percentage);
     },
     // calculates percentage of time defense is played
     "Defense %": function(team) {
@@ -259,19 +302,27 @@ module.exports = {
       }
       // calculates percentage of the time defense is played
       let percentage = (defense_total * 100.0) / defense_scores.length;
-      return percentage;
+      return Promise.resolve(percentage);
     },
-    "Score": function(team) {
+    "Median Score": function(team) {
       let median = jStat.median(allScoresForTeam(team, module.exports.general.calculateScore));
-      return median;
+      return Promise.resolve(median);
     },
   },
   team_stats_values: {
     "cell": function(stand_json) { return module.exports.standJSON.values.getAllCells(stand_json); },
   },
   stats_page_values: {
-    "Average Points": function(stand_json) { return module.exports.general.calculateScore(stand_json); },
-    "Cells": function(stand_json) { return module.exports.standJSON.values.getAllCells(stand_json); }
+    "Average Points": function(team) {
+      return allScoresForTeam(team, function(json) {
+        return module.exports.general.calculateScore(json);
+      });
+    },
+    "Cells": function(team) {
+      return allScoresForTeam(team, function(json) {
+        return module.exports.standJSON.values.getAllCells(json);
+      });
+    }
   },
   button_details: {
     cell: [
