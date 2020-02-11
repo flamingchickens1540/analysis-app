@@ -12,6 +12,7 @@
     "jquery": "^3.2.1",
     "jstat": "^1.7.1",
     "popper.js": "^1.16.1",
+    "request-promise": "^4.2.5",
     "simple-statistics": "^7.0.0",
     "tba-api-v3client": "^3.3.1"
   },

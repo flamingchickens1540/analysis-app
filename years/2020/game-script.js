@@ -6,15 +6,47 @@
 const jStat = require("jStat").jStat;
 const fs = require("fs");
 
-// TBA setup
-const TbaApiV3client = require('tba-api-v3client');
-const defaultClient = TbaApiV3client.ApiClient.instance;
-const apiKey = defaultClient.authentications['apiKey'];
-apiKey.apiKey = JSON.parse(fs.readFileSync("./resources/keys.json"))["tba-api-key"];
-const match_api = new TbaApiV3client.MatchApi();
-const event_api = new TbaApiV3client.EventApi();
-
+const request = require("request-promise");
 let comp = JSON.parse(fs.readFileSync("./resources/event.json"));
+let tbaCache = JSON.parse(fs.readFileSync("./resources/tbaCache.json"));
+
+let auth_key = JSON.parse(fs.readFileSync("./resources/keys.json"))["tba-api-key"];
+
+let options = {
+  uri: "https://www.thebluealliance.com/api/v3/event/" + comp["key"] + "/rankings",
+	headers: {
+    "X-TBA-Auth-Key": auth_key
+  },
+  json: true
+}
+
+// cacheTime represents how many minutes should have passed before it tries to find a new result rather than pulling from the cache
+function loadFromTBA(uri, cacheTime) {
+  let currentTime = new Date().getTime();
+  // checks to see if we already have recent-enough data
+  if (uri in tbaCache) {
+    if ((currentTime - tbaCache[uri]["time"]) <= (cacheTime*60000)) {
+      return Promise.resolve(tbaCache[uri]["result"]);
+    }
+  }
+  options["uri"] = "https://www.thebluealliance.com/api/v3/" + uri;
+  return new Promise((resolve) => {
+    request(options).then(function(data) {
+      resolve(data);
+    }).catch(function(err) {
+      console.log(err);
+      if (uri in tbaCache) {
+        resolve(tbaCache[uri]["result"]);
+      }
+    });
+  }).then((result) => {
+    if (!(uri in tbaCache)) { tbaCache[uri] = {}; }
+    tbaCache[uri]["result"] = result;
+    tbaCache[uri]["time"] = currentTime;
+    fs.writeFileSync("./resources/tbaCache.json", JSON.stringify(tbaCache));
+    return Promise.resolve(result);
+  });
+}
 
 function sleep(milliseconds) {
   var start = new Date().getTime();
@@ -166,22 +198,17 @@ module.exports = {
           let role = match["info"]["role"][0];
           let alliance = role == "r" ? "red":"blue";
           return new Promise((resolve) => {
-            match_api.getMatch(comp["key"] + "_qm" + match_num, {}, function(error, data, response) {
-              if (error) {
-                console.error(error);
-                resolve(0);
-              } else {
-                // until I receive a breakdown for the TBA API Score Breakdown 2020, I'm going to use random 2019 values
-                let num_alliance_inner_cells = data["score_breakdown"][alliance]["cargoPoints"];
-                let num_alliance_high_cells = data["score_breakdown"][alliance]["hatchPanelPoints"];
-                let num_alliance_total_high_cells = num_alliance_high_cells + num_alliance_inner_cells;
-                if (num_alliance_total_high_cells == 0) { resolve(0); }
-                let percentage_inner = 1.0 * num_alliance_inner_cells / num_alliance_total_high_cells;
-                let num_high_cells = module.exports.standJSON.values.getAllHighCells(match);
-                let num_inner_cells_prediction = percentage_inner * num_high_cells;
-                resolve(num_inner_cells_prediction);
-              }
-            });
+            resolve(loadFromTBA("match/" + comp["key"] + "_qm" + match_num, 45));
+          }).then(data => {
+            // until I receive a breakdown for the TBA API Score Breakdown 2020, I'm going to use random 2019 values
+            let num_alliance_inner_cells = data["score_breakdown"][alliance]["cargoPoints"];
+            let num_alliance_high_cells = data["score_breakdown"][alliance]["hatchPanelPoints"];
+            let num_alliance_total_high_cells = num_alliance_high_cells + num_alliance_inner_cells;
+            if (num_alliance_total_high_cells == 0) { resolve(0); }
+            let percentage_inner = 1.0 * num_alliance_inner_cells / num_alliance_total_high_cells;
+            let num_high_cells = module.exports.standJSON.values.getAllHighCells(match);
+            let num_inner_cells_prediction = percentage_inner * num_high_cells;
+            return Promise.resolve(num_inner_cells_prediction);
           });
         })
       ).then(function(inner_cell_predictions) {
@@ -217,21 +244,13 @@ module.exports = {
     // PCPR - Power Cell Power Ranking
     "Event Ranking": function(team) {
       return new Promise((resolve, reject) => {
-        event_api.getEventRankings(comp["key"], {}, function(error, data, response) {
-          if (error) {
-            console.error(error);
-            resolve(0);
-          } else {
-            // finds the object with the correct team name
-            let ranking = data["rankings"].find(obj => {
-              return obj["team_key"] == "frc" + team;
-            });
-            resolve(ranking["rank"]);
-          }
+        resolve(loadFromTBA("event/" + comp["key"] + "/rankings", 10));
+      }).then((data) => {
+        let ranking = data["rankings"].find(obj => {
+          return obj["team_key"] == "frc" + team;
         });
-      }).then((res) => {
         // multiply by negative to make it sort in the opposite direction
-        return Promise.resolve(res*-1);
+        return Promise.resolve(ranking["rank"]*-1);
       });
     }
   },
@@ -240,20 +259,13 @@ module.exports = {
     // gets team's ranking from TBA
     "Ranking": function(team) {
       return new Promise((resolve, reject) => {
-        event_api.getEventRankings(comp["key"], {}, function(error, data, response) {
-          if (error) {
-            console.error(error);
-            resolve(0);
-          } else {
-            // finds the object with the correct team name
-            let ranking = data["rankings"].find(obj => {
-              return obj["team_key"] == "frc" + team;
-            });
-            resolve(ranking["rank"]);
-          }
+        resolve(loadFromTBA("event/" + comp["key"] + "/rankings", 10));
+      }).then((data) => {
+        let ranking = data["rankings"].find(obj => {
+          return obj["team_key"] == "frc" + team;
         });
-      }).then((res) => {
-        return res;
+        // multiply by negative to make it sort in the opposite direction
+        return Promise.resolve(ranking["rank"]);
       });
     },
     // calculates median game piece count
