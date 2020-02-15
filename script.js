@@ -806,6 +806,10 @@ function switchPages(new_page, team, match, direction) {
     if (match === undefined) { changeCanvasMatch("1"); }
     else { changeCanvasMatch(match); }
   }
+  if (current_page == "zebra") {
+    getZebraTeams(match);
+    createZebraCheckboxes(match);
+  }
   if (current_page == "matches") {
     displayMatchesForTeam(selected_team);
     if (selected_team !== undefined) { $(".matches-team-display").text("Team " + selected_team); }
@@ -1692,26 +1696,108 @@ function significanceColor(sig) {
 //Not so much general and tight
 //Comparing loose and contact
 
-json = JSON.parse(json);
-const display = document.getElementById("display").getContext("2d");
-let heatmap = document.getElementById("heatmap");
-let heat = simpleheat(heatmap);
+const request = require("request-promise");
+const simpleheat = require("simpleheat");
+let tbaCache = JSON.parse(fs.readFileSync("./resources/tbaCache.json"));
+let zebraData = {}
 
+let options = {
+  uri: "https://www.thebluealliance.com/api/v3/match/2019cc_qm1/zebra_motionworks",
+	headers: {
+    "X-TBA-Auth-Key": JSON.parse(fs.readFileSync("./resources/keys.json"))["tba-api-key"]
+  },
+  json: true
+}
+
+function loadZebraData() {
+  Promise.all(
+    range(1,67).map((match) => {
+      return new Promise((resolve) => {
+        resolve(loadFromTBA("match/2019cc_qm" + match + "/zebra_motionworks", Number.POSITIVE_INFINITY));
+      }).then(data => {
+        return data;
+      });
+  })).then(function(allData) {
+    zebraData = allData;
+  });
+}
+
+function getZebraMatch(match_num) {
+  return zebraData[match_num - 1];
+}
+
+function getZebraTeams(match_num) {
+  let data = getZebraMatch(match_num);
+  zebraTeams = [];
+  for (let team_id in schedule[match_num.toString()]) {
+    let alliance = team_id <= 2 ? "red":"blue";
+    zebraTeams.push(
+      new team(
+        schedule[match_num.toString()][team_id],
+        data["alliances"][alliance][(team_id % 3).toString()],
+        "red",
+        alliance === "blue"
+      )
+    );
+  }
+  zebraTeams[0].draw();
+  zebraTeams[3].draw();
+  document.getElementById("teamNumber").innerHTML = zebraTeams[0].number;
+  document.getElementById("contact").innerHTML = zebraTeams[0].getPercentage(generalBoundary);
+}
+
+function createZebraCheckboxes(match_num) {
+  $(".zebra-team-select").html("");
+  for (let x in range(0,6)) {
+    $(".zebra-team-select").append(`
+      <div class="form-check-inline">
+        <label class="form-check-label">
+          <input type="checkbox" class="form-check-input" value="">` + schedule[match_num][parseInt(x)] + `
+        </label>
+      </div>
+    `);
+  };
+}
+
+// cacheTime represents how many minutes should have passed before it tries to find a new result rather than pulling from the cache
+function loadFromTBA(uri, cacheTime) {
+  let currentTime = new Date().getTime();
+  // checks to see if we already have recent-enough data
+  if (uri in tbaCache) {
+    if ((currentTime - tbaCache[uri]["time"]) <= (cacheTime*60000)) {
+      return Promise.resolve(tbaCache[uri]["result"]);
+    }
+  }
+  options["uri"] = "https://www.thebluealliance.com/api/v3/" + uri;
+  return new Promise((resolve) => {
+    request(options).then(function(data) {
+      resolve(data);
+    }).catch(function(err) {
+      console.log(err);
+      if (uri in tbaCache) {
+        resolve(tbaCache[uri]["result"]);
+      }
+    });
+  }).then((result) => {
+    if (!(uri in tbaCache)) { tbaCache[uri] = {}; }
+    tbaCache[uri]["result"] = result;
+    tbaCache[uri]["time"] = currentTime;
+    fs.writeFileSync("./resources/tbaCache.json", JSON.stringify(tbaCache));
+    return Promise.resolve(result);
+  });
+}
+
+let display, zebraJSON, heatmap, heat, zebraTeams;
+
+const constant = 10;
 const contactBoundary = 3.5;
 const tightBoundary = 6.5;
 const looseBoundary = 10;
 const generalBoundary = "generalBoundary";
 
-if (json["alliances"]["blue"]["0"]["xs"][0] > 25) {
-  document.getElementById("display").style.backgroundImage = "url('fieldFlip.png')";
-  document.getElementById("heatmap").style.backgroundImage = "url('fieldFlip.png')";
-}
-
-const constant = 10;
-
 class team {
-  constructor(object, color, isBlue) {
-    this.number = object["team_key"];
+  constructor(number, object, color, isBlue) {
+    this.number = number;
     this.x = object["xs"];
     this.y = object["ys"];
     this.color = color;
@@ -1773,7 +1859,7 @@ class team {
     if (boundary === generalBoundary) {
       for (let team = this.teamVal; team < this.teamVal + 3; team++) {
         for (let i = 0; i < this.x.length; i++) {
-          if (inGeneralBoundary(this, teams[team], i) && !(inGeneralBoundary(this, teams[team], i-1))){
+          if (inGeneralBoundary(this, zebraTeams[team], i) && !(inGeneralBoundary(this, zebraTeams[team], i-1))){
             this.contacts++;
           }
         }
@@ -1781,7 +1867,7 @@ class team {
     } else {
       for (let team = this.teamVal; team < this.teamVal + 3; team++) {
         for (let i = 0; i < this.x.length; i++) {
-          if (inBoundary(this, teams[team], i, boundary)){
+          if (inBoundary(this, zebraTeams[team], i, boundary)){
             this.contacts++;
           }
         }
@@ -1797,7 +1883,6 @@ class team {
         if (this.x[0] < 25){
           if (this.x[i] > 25) {
             this.contacts ++;
-            console.log(0);
           }
         }
       }
@@ -1812,59 +1897,71 @@ class team {
     }
     return Math.round(this.contacts/this.x.length * 100);
   }
-
-
 }
 
-function inBoundary(team1, team2, time, distance) {
-  return (((team1.x[time] - team2.x[time]) ** 2 + (team1.y[time] - team2.y[time]) ** 2) < distance ** 2);
-}
+$(document).ready(function() {
 
-function inGeneralBoundary(team1, team2, time) {
-  if (team1.x[0] < 25){
-    return ((team1.x[time] < 25) && !(team1.x[time] < 25))
-  } else {
-    return ((team1.x[time] < 25) && !(team1.x[time] < 25))
+  loadZebraData();
+
+  display = document.getElementById("zebraDisplay").getContext("2d");
+  heatmap = document.getElementById("zebraHeatmap");
+  heat = simpleheat(heatmap);
+
+  // new Promise((resolve) => {
+  //   resolve(loadFromTBA("match/2019cc_qm1/zebra_motionworks", 300));
+  // }).then((result) => {
+  //   zebraJSON = result;
+  //
+  //   let team0 = new team(1540, zebraJSON["alliances"]["blue"]["0"], "rgb(0,107,112)", true);
+  //   let team1 = new team(1540, zebraJSON["alliances"]["blue"]["1"], "rgb(0,38,112)", true);
+  //   let team2 = new team(1540, zebraJSON["alliances"]["blue"]["2"], "rgb(15,0,112)", true);
+  //   let team3 = new team(1540, zebraJSON["alliances"]["red"]["0"], "rgb(255,72,154)", false);
+  //   let team4 = new team(1540, zebraJSON["alliances"]["red"]["1"], "rgb(255,18,0)", false);
+  //   let team5 = new team(1540, zebraJSON["alliances"]["red"]["2"], "rgb(255,128,0)", false);
+  //
+  //   let zebraTeams = [
+  //     team0,
+  //     team1,
+  //     team2,
+  //     team3,
+  //     team4,
+  //     team5
+  //   ];
+  //
+  //   if (zebraJSON["alliances"]["blue"]["0"]["xs"][0] > 25) {
+  //     document.getElementById("zebraDisplay").style.backgroundImage = "url('./resources/field.png')";
+  //     document.getElementById("zebraHeatmap").style.backgroundImage = "url('./resources/field.png')";
+  //   }
+  //
+  //   team0.draw();
+  //
+  //   document.getElementById("teamNumber").innerHTML = team0.number;
+  //   document.getElementById("contact").innerHTML = team0.getPercentage(generalBoundary);
+  //
+  //
+  // });
+
+  function inBoundary(team1, team2, time, distance) {
+    return (Math.pow((team1.x[time] - team2.x[time]), 2) + Math.pow((team1.y[time] - team2.y[time]), 2) < Math.pow(distance, 2));
   }
-}
 
-function getMin(array) {
-  let minimum = 1000;
-  for (let i = 0; i < array.length; i++) {
-    if (array[i] < minimum) {
-      minimum = array[i];
+  function inGeneralBoundary(team1, team2, time) {
+    if (team1.x[0] < 25){
+      return ((team1.x[time] < 25) && !(team1.x[time] < 25))
+    } else {
+      return ((team1.x[time] < 25) && !(team1.x[time] < 25))
     }
   }
-  return minimum;
-}
 
-function getMax(array) {
-  let maximum = 0;
-  for (let i = 0; i < array.length; i++) {
-    if (array[i] > maximum) {
-      maximum = array[i];
-    }
+  function getMin(array) {
+    return Math.min.apply(null, array);
   }
-  return maximum;
-}
 
-let team0 = new team(json["alliances"]["blue"]["0"], "rgb(0,107,112)", true);
-let team1 = new team(json["alliances"]["blue"]["1"], "rgb(0,38,112)", true);
-let team2 = new team(json["alliances"]["blue"]["2"], "rgb(15,0,112)", true);
-let team3 = new team(json["alliances"]["red"]["0"], "rgb(255,72,154)", false);
-let team4 = new team(json["alliances"]["red"]["1"], "rgb(255,18,0)", false);
-let team5 = new team(json["alliances"]["red"]["2"], "rgb(255,128,0)", false);
+  function getMax(array) {
+    return Math.max.apply(null, array);
+  }
 
-let teams = [
-  team0,
-  team1,
-  team2,
-  team3,
-  team4,
-  team5
-];
-
-
+});
 
 /********************************************/
 /*                PICKLISTS                 */
@@ -2355,6 +2452,30 @@ function compareByMatch(a,b) {
   return parseInt(gameScript.standJSON.getMatchNumber(a)) - parseInt(gameScript.standJSON.getMatchNumber(b));
 }
 
+// like the python range function
+function range(start, stop, step) {
+    if (typeof stop == 'undefined') {
+        // one param defined
+        stop = start;
+        start = 0;
+    }
+
+    if (typeof step == 'undefined') {
+        step = 1;
+    }
+
+    if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
+        return [];
+    }
+
+    var result = [];
+    for (var i = start; step > 0 ? i < stop : i > stop; i += step) {
+        result.push(i);
+    }
+
+    return result;
+};
+
 // is a point in a box?
 function inbox(point_x, point_y, box_x, box_y, box_width, box_height) {
   return (point_x >= box_x && point_x <= box_x + box_width && point_y >= box_y && point_y <= box_y + box_height);
@@ -2564,6 +2685,10 @@ $(document).ready(function() {
   // go draw for the match
   $(".draw-btn").click(function() {
     switchPages("drawing", undefined, selected_match, 1);
+  });
+  // go draw for the match
+  $(".zebra-btn").click(function() {
+    switchPages("zebra", undefined, selected_match, 1);
   });
   // add a picklist
   $(".add-picklist").click(createPicklist);

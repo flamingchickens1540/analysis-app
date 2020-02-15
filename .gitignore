@@ -72,3 +72,5 @@ years/2019/data-storage/*
 # gmail api stuff
 gmail
 gmail/*
+
+*.idea
