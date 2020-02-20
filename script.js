@@ -571,16 +571,16 @@ function loadDeviceData() {
 
 // starts a thread that checks for new files in the data folder
 // creates a "New Data" button in top-left when it notices new valid files
-fs.watch("./data", { encoding: 'buffer', recursive: true }, (eventType, filename) => {
-  // this catches all files that don't have a time logged, which includes all non-JSON files and manifest.json
-  try {
-    sleep(10000);
-    let file = JSON.parse(fs.readFileSync("./data/" + filename));
-    if ("time" in file["info"]) {
-      $(".new-bluetooth-files").show();
-    }
-  } catch(err) { }
-});
+// fs.watch("./data", { encoding: 'buffer', recursive: true }, (eventType, filename) => {
+//   // this catches all files that don't have a time logged, which includes all non-JSON files and manifest.json
+//   try {
+//     sleep(10000);
+//     let file = JSON.parse(fs.readFileSync("./data/" + filename));
+//     if ("time" in file["info"]) {
+//       $(".new-bluetooth-files").show();
+//     }
+//   } catch(err) { }
+// });
 
 /********************************************/
 /*          GETTING DATA FROM TBA           */
@@ -1698,7 +1698,12 @@ function significanceColor(sig) {
 
 const request = require("request-promise");
 const simpleheat = require("simpleheat");
-let tbaCache = JSON.parse(fs.readFileSync("./resources/tbaCache.json"));
+let tbaCache;
+if (fs.existsSync("./resources/tbaCache.json")) {
+  tbaCache = JSON.parse(fs.readFileSync("./resources/tbaCache.json"))
+} else {
+  tbaCache = {}
+}
 let zebraData = {}
 
 let options = {
