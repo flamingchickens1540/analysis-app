@@ -809,6 +809,7 @@ function switchPages(new_page, team, match, direction) {
   if (current_page == "zebra") {
     getZebraTeams(match);
     createZebraCheckboxes(match);
+    zebraCheckMarks();
   }
   if (current_page == "matches") {
     displayMatchesForTeam(selected_team);
@@ -1565,9 +1566,9 @@ function displayMatchSummary(match_number) {
     } else {
       $(".match-summary-" + role + "-check").hide();
     }
-    if (image_data[team_id].length >= 0) {
-      $(".summary-image-" + role).attr("src", image_data[team_id][0]);
-    }
+    // if (image_data[team_id].length >= 0) {
+    //   $(".summary-image-" + role).attr("src", image_data[team_id][0]);
+    // }
   }
 }
 
@@ -1697,7 +1698,7 @@ function significanceColor(sig) {
 //Comparing loose and contact
 
 const request = require("request-promise");
-const simpleheat = require("simpleheat");
+//const simpleheat = require("simpleheat");
 let tbaCache;
 if (fs.existsSync("./resources/tbaCache.json")) {
   tbaCache = JSON.parse(fs.readFileSync("./resources/tbaCache.json"))
@@ -1757,7 +1758,7 @@ function createZebraCheckboxes(match_num) {
     $(".zebra-team-select").append(`
       <div class="form-check-inline">
         <label class="form-check-label">
-          <input type="checkbox" class="form-check-input" value="">` + schedule[match_num][parseInt(x)] + `
+          <input type="checkbox" class="form-check-input" id="zebra-team-check` + x + `" value="">` + schedule[match_num][parseInt(x)] + `
         </label>
       </div>
     `);
@@ -1792,7 +1793,7 @@ function loadFromTBA(uri, cacheTime) {
   });
 }
 
-let display, zebraJSON, heatmap, heat, zebraTeams;
+let displayElement, display, zebraJSON, heatmap, heat, zebraTeams;
 
 const constant = 10;
 const contactBoundary = 3.5;
@@ -1806,6 +1807,7 @@ class team {
     this.x = object["xs"];
     this.y = object["ys"];
     this.color = color;
+    this.drawn = false;
     this.heatMapData = [];
     for (let i = 0; i < this.y.length; i++) {
       this.heatMapData.push([this.x[i] * constant, this.y[i] * constant, 1])
@@ -1825,6 +1827,7 @@ class team {
   }
 
   drawBound() {
+    this.drawn = true;
     display.moveTo(this.x[0], this.y[0]);
     display.beginPath();
     for (let i = 1; i < this.y.length; i++) {
@@ -1841,6 +1844,7 @@ class team {
   }
 
   drawStart() {
+    this.drawn = true;
     display.beginPath();
     display.arc(this.x[0] * constant, this.y[0] * constant, 3, 0, 2 * Math.PI, false);
     display.lineWidth = 7;
@@ -1854,6 +1858,7 @@ class team {
   }
 
   draw() {
+    this.drawn = true;
     this.drawBound();
     this.drawHeat(18);
     this.drawStart();
@@ -1908,7 +1913,8 @@ $(document).ready(function() {
 
   loadZebraData();
 
-  display = document.getElementById("zebraDisplay").getContext("2d");
+  displayElement = document.getElementById("zebraDisplay");
+  display = displayElement.getContext("2d");
   heatmap = document.getElementById("zebraHeatmap");
   heat = simpleheat(heatmap);
 
@@ -1967,6 +1973,30 @@ $(document).ready(function() {
   }
 
 });
+
+function zebraCheckMarks() {
+  for (let x in range(0,6)) {
+    console.log(0)
+    $("#zebra-team-check" + x).click(function() {
+      console.log(1)
+      if ($("#zebra-team-check" + x).is(":checked")){
+        console.log(2)
+        zebraTeams[x].drawBound();
+        zebraTeams[x].drawStart();
+      } else{
+        console.log(3)
+        zebraTeams[x].drawn = false;
+        display.clearRect(0, 0, displayElement.width, displayElement.height);
+        for (let y in range(0,6)) {
+          if(zebraTeams[y].drawn){
+            zebraTeams[y].drawBound();
+            zebraTeams[y].drawStart();
+          }
+        }
+      }
+    })
+  };
+}
 
 /********************************************/
 /*                PICKLISTS                 */
