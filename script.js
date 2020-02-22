@@ -69,9 +69,9 @@ function insertTeam(team) {
 // inserts teams into Teams page
 function insertTeams() {
   // first, check to see if team_id_to_name matches teams
-  if (fs.existsSync("./resources/teams.json")) {
+  if (fs.existsSync("./data/resources/teams.json")) {
     // if there is a teams file, use that to determine team names at the event
-    let file = JSON.parse(fs.readFileSync("./resources/teams.json"));
+    let file = JSON.parse(fs.readFileSync("./data/resources/teams.json"));
     // if the list of teams we know equal to the keys of the teams.json file
     if (arraysEqual(teams, Object.keys(file))) {
       // put all the info into team_id_to_name
@@ -130,7 +130,7 @@ function loadData() {
   // NOTES
   loadNotesData();
   // PRESCOUTING
-  loadPrescouting("./resources/prescout.csv");
+  loadPrescouting("./data/resources/prescout.csv");
 }
 
 // loads data from data/stand/manifest.json
@@ -325,8 +325,8 @@ function loadManifests() {
 // function that loads the important files (above)
 function loadImportantFiles() {
   // Event information
-  if (fs.existsSync("./resources/event.json")) {
-    comp = JSON.parse(fs.readFileSync("./resources/event.json"));
+  if (fs.existsSync("./data/resources/event.json")) {
+    comp = JSON.parse(fs.readFileSync("./data/resources/event.json"));
     if (year != comp["year"]) {
       year = comp["year"];
       gameScript = require("./years/" + year + "/game-script.js");
@@ -342,8 +342,8 @@ function loadImportantFiles() {
     getTeamEvents();
   }
   // Schedule
-  if (fs.existsSync("./resources/schedule.json")) {
-    schedule = JSON.parse(fs.readFileSync("./resources/schedule.json"));
+  if (fs.existsSync("./data/resources/schedule.json")) {
+    schedule = JSON.parse(fs.readFileSync("./data/resources/schedule.json"));
   } else {
     alert("Please load a valid schedule."); return;
   }
@@ -419,7 +419,7 @@ function loadFileFromPath(path) {
   } else if (searching == "schedule") {
     let file = fs.readFileSync(path).toString();
     if (isJsonString(file) && file[0] == "{") {
-      fs.writeFileSync("./resources/schedule.json", file);
+      fs.writeFileSync("./data/resources/schedule.json", file);
     }
   }
   // reload that page!
@@ -585,6 +585,25 @@ fs.watch("./data", { encoding: 'buffer', recursive: true }, (eventType, filename
   } catch(err) { }
 });
 
+let dropboxAuto = false
+if (fs.existsSync("./resources/dropbox.txt")) {
+  dropboxAuto = (fs.readFileSync("./resources/dropbox.txt") == "true");
+}
+if (dropboxAuto) {
+  // starts a thread that checks for new files in the dropbox folder
+  // creates a "New Data" button in top-left when it notices new valid files
+  fs.watch("/Dropbox/data", { encoding: 'buffer', recursive: true }, (eventType, filename) => {
+    // this catches all files that don't have a time logged, which includes all non-JSON files and manifest.json
+    try {
+      sleep(10000);
+      let file = JSON.parse(fs.readFileSync("./data/" + filename));
+      if ("time" in file["info"]) {
+        $(".new-bluetooth-files").show();
+      }
+    } catch(err) { }
+  });
+}
+
 /********************************************/
 /*          GETTING DATA FROM TBA           */
 /********************************************/
@@ -703,7 +722,7 @@ function selectEvent(events, event_id) {
     if (ok) {
       dialogs.alert("Switching to: " + teamEvent["key"]);
       // saves event file
-      fs.writeFileSync("./resources/event.json", JSON.stringify(teamEvent));
+      fs.writeFileSync("./data/resources/event.json", JSON.stringify(teamEvent));
 
       if (fs.existsSync("./years/" + year + "/data-storage/" + comp["name"])) {
         dialogs.confirm("Do you want to override the folder for the previous game?", function(override) {
@@ -1249,7 +1268,7 @@ function sortTable() {
     window.setTimeout(sortTable, 200);
     return;
   }
-  fs.writeFileSync("./resources/teams.json", JSON.stringify(team_id_to_name));
+  fs.writeFileSync("./data/resources/teams.json", JSON.stringify(team_id_to_name));
   var table, rows, switching, i, x, y, shouldSwitch;
   table = document.getElementById("teams-table");
   switching = true;
@@ -1677,8 +1696,8 @@ function setupEliminationsPage() {
     }
   }
   // Loads alliances.json
-  if (fs.existsSync("./resources/alliances.json")) {
-    elims_alliances = JSON.parse(fs.readFileSync("./resources/alliances.json"));
+  if (fs.existsSync("./data/resources/alliances.json")) {
+    elims_alliances = JSON.parse(fs.readFileSync("./data/resources/alliances.json"));
     loadElimsAlliances();
     generateElimsMatches();
   }
@@ -2805,6 +2824,14 @@ $(document).ready(function() {
   $(".bluetooth-server").click(function() {
 	  bluetoothScript();
   });
+  // copy the data to dropbox
+  $(".export-dropbox").click(function() {
+    fs.copySync("./data", "/Dropbox/data");
+  });
+  // makes it autocheck for new dropbox data
+  $(".dropbox-autoload").click(function() {
+    fs.writeFileSync("./resources/dropbox.txt",!dropboxAuto)
+  });
   // whenever we "return" in the text box
   $('.stats-input').keypress(function (e) {
     // keyCode 13 is "enter"
@@ -2846,7 +2873,7 @@ $(document).ready(function() {
   $(".generate-bracket").click(function() {
     generateElimsMatches();
     // saves alliances.json to the resources folder
-    fs.writeFileSync("./resources/alliances.json", JSON.stringify(elims_alliances));
+    fs.writeFileSync("./data/resources/alliances.json", JSON.stringify(elims_alliances));
   });
   // go to home page
   $(".go-to-home").click(function() {
@@ -2896,7 +2923,7 @@ $(document).ready(function() {
 
   // Listener to team search
   (() => {
-    let teams = JSON.parse(fs.readFileSync('./resources/teams.json', 'utf8'));
+    let teams = JSON.parse(fs.readFileSync('./data/resources/teams.json', 'utf8'));
     let list = [];
     for (const number in teams) {
       if (teams.hasOwnProperty(number)) {

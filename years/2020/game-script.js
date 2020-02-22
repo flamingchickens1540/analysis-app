@@ -7,7 +7,7 @@ const jStat = require("jStat").jStat;
 const fs = require("fs");
 
 const request = require("request-promise");
-let comp = JSON.parse(fs.readFileSync("./resources/event.json"));
+let comp = JSON.parse(fs.readFileSync("./data/resources/event.json"));
 let tbaCache = JSON.parse(fs.readFileSync("./resources/tbaCache.json"));
 
 let auth_key = JSON.parse(fs.readFileSync("./resources/keys.json"))["tba-api-key"];
