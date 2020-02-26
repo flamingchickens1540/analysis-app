@@ -810,6 +810,7 @@ function switchPages(new_page, team, match, direction) {
     getZebraTeams(match);
     createZebraCheckboxes(match);
     zebraCheckMarks();
+    zebraDefenseBoundaries();
   }
   if (current_page == "matches") {
     displayMatchesForTeam(selected_team);
@@ -1746,10 +1747,17 @@ function getZebraTeams(match_num) {
       )
     );
   }
-  zebraTeams[0].draw();
-  zebraTeams[3].draw();
-  document.getElementById("teamNumber").innerHTML = zebraTeams[0].number;
-  document.getElementById("contact").innerHTML = zebraTeams[0].getPercentage(generalBoundary);
+  // zebraTeams[0].draw();
+  // zebraTeams[3].draw();
+  // document.getElementById("teamNumber").innerHTML = zebraTeams[0].number;
+  // document.getElementById("contact").innerHTML = zebraTeams[0].getPercentage(generalBoundary);
+}
+
+//Display defense boundary data
+function zebraDefenseBoundaries() {
+  for (let team = 0; team < zebraTeams.length; team++) {
+    document.getElementById("teamBoundary" + team).innerHTML = "<td>" + zebraTeams[team].number + "</td>" + "<td>" + team_id_to_name[zebraTeams[team].number] + "</td>" + "<td>" + zebraTeams[team].getTotal(looseBoundary) + "</td>" + "<td>" + zebraTeams[team].getTotal(contactBoundary) + "</td>";
+  }
 }
 
 function createZebraCheckboxes(match_num) {
@@ -1877,7 +1885,7 @@ class team {
     } else {
       for (let team = this.teamVal; team < this.teamVal + 3; team++) {
         for (let i = 0; i < this.x.length; i++) {
-          if (inBoundary(this, zebraTeams[team], i, boundary)){
+          if (inBoundary(this, zebraTeams[team], i, boundary) && !(inBoundary(this, zebraTeams[team], i - 1, boundary))){
             this.contacts++;
           }
         }
@@ -1951,28 +1959,27 @@ $(document).ready(function() {
   //
   //
   // });
-
-  function inBoundary(team1, team2, time, distance) {
-    return (Math.pow((team1.x[time] - team2.x[time]), 2) + Math.pow((team1.y[time] - team2.y[time]), 2) < Math.pow(distance, 2));
-  }
-
-  function inGeneralBoundary(team1, team2, time) {
-    if (team1.x[0] < 25){
-      return ((team1.x[time] < 25) && !(team1.x[time] < 25))
-    } else {
-      return ((team1.x[time] < 25) && !(team1.x[time] < 25))
-    }
-  }
-
-  function getMin(array) {
-    return Math.min.apply(null, array);
-  }
-
-  function getMax(array) {
-    return Math.max.apply(null, array);
-  }
-
 });
+
+function inBoundary(team1, team2, time, distance) {
+  return (Math.pow((team1.x[time] - team2.x[time]), 2) + Math.pow((team1.y[time] - team2.y[time]), 2) < Math.pow(distance, 2));
+}
+
+function inGeneralBoundary(team1, team2, time) {
+  if (team1.x[0] < 25){
+    return ((team1.x[time] < 25) && !(team1.x[time] < 25))
+  } else {
+    return ((team1.x[time] < 25) && !(team1.x[time] < 25))
+  }
+}
+
+function getMin(array) {
+  return Math.min.apply(null, array);
+}
+
+function getMax(array) {
+  return Math.max.apply(null, array);
+}
 
 function zebraCheckMarks() {
   for (let x in range(0,6)) {

@@ -249,14 +249,28 @@
       <button class="btn btn-primary undo-canvas">Undo</button>
       <button class="btn btn-dark erase-canvas">Reset</button>
     </div>
+
     <!-- zebra page -->
     <div style = "display:none" id = "zebra" class = "page component">
       <h3 class="margin-above">Zebra MotionWorks</h3>
+
+      <table class="zebraTeams table">
+        <tr>
+          <td>Team #</td>
+          <td>Team Name</td>
+          <td><button class="btn btn-default" onclick="alert('This is the total instances a robot enters a 10 feet boundary of robots of the opposing team')">Loose Defense</button></td>
+          <td><button class="btn btn-default" onclick="alert('This is the total contacts a robot makes with members of the opposing team')">Contacts</button></td>
+        </tr>
+        <tr id="teamBoundary0"></tr>
+        <tr id="teamBoundary1"></tr>
+        <tr id="teamBoundary2"></tr>
+        <tr id="teamBoundary3"></tr>
+        <tr id="teamBoundary4"></tr>
+        <tr id="teamBoundary5"></tr>
+      </table>
+
       <div class="zebra-team-select"></div>
-      <div class="zebraTeam">
-        <p>Team:</p><p id="teamNumber"></p>
-        <p>Contacts:</p><p id="contact"></p>
-      </div>
+
       <div class="zebraDisplay">
         <canvas id="zebraDisplay" width="540" height="270" style="border:1px solid #000000; background-image: url('./resources/field.png'); background-size: cover;">
         </canvas>
@@ -264,6 +278,7 @@
         </canvas>
       </div>
     </div>
+
     <!-- pit layout -->
     <div style = "display:none" id = "pit-layout" class = "page component">
       <h3 class="margin-above">Pit Layout</h3>
